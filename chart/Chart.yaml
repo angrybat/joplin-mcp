@@ -1,0 +1,10 @@
+apiVersion: v2
+name: joplin-mcp
+description: Kubernetes-ready Joplin MCP wrapper server
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - joplin
+  - mcp
+  - ai

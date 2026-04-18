@@ -1,0 +1,83 @@
+replicaCount: 1
+
+image:
+  repository: joplin-mcp/joplin-mcp
+  tag: ""          # defaults to .Chart.AppVersion
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: false
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+service:
+  type: ClusterIP
+  mcpPort: 8000
+  healthPort: 8001
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# Required — provide via sealed secret or external-secrets
+env:
+  JOPLIN_HOST: ""           # hostname:port of Joplin REST API
+  JOPLIN_TOKEN: ""          # Joplin API token (use secretKeyRef in production)
+  LOG_LEVEL: "info"
+  MCP_PORT: "8000"
+  HEALTH_PORT: "8001"
+  READYZ_CACHE_SECONDS: "10"
+  READYZ_TIMEOUT_SECONDS: "2.0"
+
+# Reference an existing secret for JOPLIN_TOKEN instead of plaintext
+existingSecret:
+  name: ""                  # secret name; if set, JOPLIN_TOKEN is sourced from secret
+  key: "JOPLIN_TOKEN"
+
+startupProbe:
+  httpGet:
+    path: /startupz
+    port: 8001
+  failureThreshold: 30
+  periodSeconds: 5
+
+livenessProbe:
+  httpGet:
+    path: /livez
+    port: 8001
+  initialDelaySeconds: 10
+  periodSeconds: 15
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: 8001
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

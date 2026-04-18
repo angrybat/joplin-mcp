@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "joplin-mcp.fullname" . }}
+  labels:
+    {{- include "joplin-mcp.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "joplin-mcp.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: mcp
+      port: {{ .Values.service.mcpPort }}
+      targetPort: mcp
+      protocol: TCP
+    - name: health
+      port: {{ .Values.service.healthPort }}
+      targetPort: health
+      protocol: TCP
