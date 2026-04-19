@@ -13,7 +13,7 @@ release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
 current_phase: documentation-bootstrap
-next_action: scaffold project structure and initialize Python project
+next_action: Add new skill for updating progress documentation
 ---
 
 # Joplin MCP — Execution Plan
@@ -90,7 +90,9 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 - Build stages have **no service dependencies**; they run independently.
 - Service stages compose in strict dependency order.
-- Integration tests are a **mandatory blocking gate** for image release.
+- The `tests` stage is the **mandatory test blocking gate** for image release.
+- Unit tests should be implemented before the integration test suite, but they do not block `integration-tests` execution.
+- A combined `tests` stage must run unit and integration suites concurrently and pass only when both pass.
 - Supply chain checks are a **mandatory blocking gate** for image release.
 - Chart release is **independent** of image release cadence.
 - Joplin and Postgres versions are **explicit pipeline inputs**, never implicit.
@@ -160,6 +162,44 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Failure Criteria:**
 - Build fails due to dependency resolution errors.
 - Health endpoint does not respond after startup.
+
+---
+
+### Stage: `unit-tests`
+
+**Status:** ⬜ Not started
+**Started:** —
+**Completed:** —
+
+**Purpose:** Run fast, deterministic unit tests for the wrapper code.
+
+**Inputs:**
+- `src/joplin_mcp_wrapper/` — wrapper source code
+- `tests/unit/` — unit test suite
+- Python test dependencies from `pyproject.toml`
+
+**Outputs:**
+- Test result report
+- Pass/fail exit code
+
+**Depends on:** none
+
+**Blocking gate for:** `tests`
+
+**Test Coverage:**
+- Environment validation rejects missing required configuration.
+- Child command construction uses expected MCP transport and port.
+- Supervisor loop updates child process state across startup and restart paths.
+- Health probes return the expected startup, liveness, and readiness responses.
+- Readiness caching avoids repeated Joplin reachability checks inside the cache window.
+
+**Success Criteria:**
+- All assertions pass.
+- Tests run without requiring live Joplin or Postgres services.
+
+**Failure Criteria:**
+- Any assertion fails.
+- Test execution depends on external services or non-deterministic timing.
 
 ---
 
@@ -319,7 +359,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 **Depends on:** `mcp-service`, `build-integration-runner-image`, `fixture-data`
 
-**Blocking gate for:** `publish-image`
+**Blocking gate for:** `tests`
 
 **Test Coverage:**
 - Tool discovery returns expected tools.
@@ -332,6 +372,39 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Success Criteria:**
 - All assertions pass.
 - Fixture lock checksums match generated fixture outputs.
+---
+
+### Stage: `tests`
+
+**Status:** ⬜ Not started
+**Started:** —
+**Completed:** —
+
+**Purpose:** Run the unit and integration suites concurrently as the unified test gateway for PR validation and image release preparation.
+
+**Inputs:**
+- `unit-tests` stage definition and prerequisites
+- `integration-tests` stage definition and prerequisites
+
+**Outputs:**
+- Combined test execution summary
+- Pass/fail exit code covering both suites
+
+**Depends on:** `unit-tests`, `integration-tests`
+
+**Blocking gate for:** `publish-image`
+
+**Success Criteria:**
+- Both `unit-tests` and `integration-tests` pass.
+- The stage emits clear output identifying which suite failed when there is a failure.
+
+**Failure Criteria:**
+- Either test suite fails.
+- The stage serializes the two suites instead of allowing Dagger to execute them concurrently.
+
+**Execution Notes:**
+- This stage runs `unit-tests` and `integration-tests` together and succeeds only if both suites pass.
+- Each suite remains independently invokable outside this stage.
 
 **Failure Criteria:**
 - Any assertion fails.
@@ -381,7 +454,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 **Inputs:**
 - Built MCP image from `build-mcp-image`
-- Passing `integration-tests` result
+- Passing `tests` result
 - Passing `pre-publish-checks` result
 - Git tag version (`vX.Y.Z`)
 
@@ -390,14 +463,14 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - Published `latest` tag (stable releases only)
 - Release metadata: version, digest, SBOM reference, provenance reference
 
-**Depends on:** `integration-tests` (blocking), `pre-publish-checks` (blocking)
+**Depends on:** `tests` (blocking), `pre-publish-checks` (blocking)
 
 **Success Criteria:**
 - Image published with correct semver tag.
 - Release metadata emitted.
 
 **Failure Criteria:**
-- Either blocking gate has not passed.
+- Any blocking gate has not passed.
 - Docker Hub push fails.
 
 ---
@@ -435,29 +508,45 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 ## Stage Dependency Graph
 
 ```
-fixture-data ─────────────────────────────────────────────────┐
-                                                              ▼
-build-fixture-tooling-image ──────────────────────────► postgres-service
-                                                              │
-                                                              ▼
-                                                       joplin-service
-                                                              │
-build-mcp-image ──────────────────────────────────────► mcp-service
-                │                                             │
-                │                                             ▼
-                │                         build-integration-runner-image
-                │                                    │        │
-                │                                    ▼        ▼
-                │                           integration-tests ◄── fixture-data
-                │                                    │
-                ▼                                    │
-        pre-publish-checks                           │
-                │                                    │
-                └──────────┬─────────────────────────┘
-                           ▼
-                     publish-image
+INDEPENDENT STAGES (Layer 0)
+├── fixture-data
+├── build-mcp-image
+├── build-fixture-tooling-image
+├── build-integration-runner-image
+└── unit-tests (src/ + tests/unit)
 
 
+LEVEL 1: DIRECT DEPENDENCIES
+├── postgres-service         ◄─── fixture-data
+└── pre-publish-checks       ◄─── build-mcp-image
+
+
+LEVEL 2: POSTGRES DEPENDENT
+└── joplin-service           ◄─── postgres-service
+
+
+LEVEL 3: JOPLIN + BUILD DEPENDENT
+└── mcp-service              ◄─── build-mcp-image
+                                  joplin-service
+
+
+LEVEL 4: SERVICE + BUILD + FIXTURE DEPENDENT
+└── integration-tests        ◄─── mcp-service
+                                  build-integration-runner-image
+                                  fixture-data
+
+
+LEVEL 5: BOTH TEST SUITES
+└── tests                    ◄─── unit-tests
+                                  integration-tests
+
+
+LEVEL 6: PUBLISH TEST GATE + SUPPLY CHAIN
+└── publish-image           ◄─── tests
+                                  pre-publish-checks
+
+
+INDEPENDENT: CHART RELEASE FLOW
 chart/ ──► chart-change-detection ──► chart-lint ──► publish-chart
 ```
 
@@ -467,10 +556,12 @@ chart/ ──► chart-change-detection ──► chart-lint ──► publish-c
 
 | Mode | Trigger | Stages Required |
 |---|---|---|
-| Image release | `vX.Y.Z` git tag | fixture-data, all builds, all services, integration-tests, pre-publish-checks, publish-image |
+| Image release | `vX.Y.Z` git tag | fixture-data, all builds, unit-tests, all services, integration-tests, tests, pre-publish-checks, publish-image |
 | Chart release | `chart-vX.Y.Z` git tag | chart-change-detection, chart-lint, publish-chart |
 | Full release | both tags present | both paths |
+| Unit test only | manual / PR | unit-tests |
 | Integration test only | manual / PR | fixture-data, all builds, all services, integration-tests |
+| Test gateway run | manual / PR | fixture-data, all builds, all services, tests |
 
 ---
 
@@ -481,6 +572,7 @@ _Append-only. Each entry records what changed, when, and why._
 | Date | Change |
 |---|---|
 | 2026-04-18 | Plan created. Project status set to not-started. |
+| 2026-04-19 | Added dedicated `unit-tests` and `integration-tests` stages plus a `tests` gateway stage that passes only when both suites pass. |
 
 ---
 
@@ -504,7 +596,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-18 | Wrapper supervises joplin-mcp as child process | Allows independent health endpoints without modifying upstream | Active |
 | 2026-04-18 | Streamable HTTP as primary transport | Required for hosted VS Code agent connectivity | Active |
 | 2026-04-18 | Joplin + Postgres versions as explicit pipeline inputs | Ensures version matrix is always tested explicitly | Active |
-| 2026-04-18 | Integration tests gate image publish only | Decouples chart cadence from image cadence | Active |
+| 2026-04-18 | Automated tests gate image publish only | Decouples chart cadence from image cadence while keeping chart release independent | Superseded |
 | 2026-04-18 | Chart release is change-driven and independent | Chart changes rarely; forcing re-release on every image bump adds no value | Active |
 | 2026-04-18 | Fixture lock prevents silent expectation drift | Integration tests are only trustworthy if expected outputs are reviewed on change | Active |
 | 2026-04-18 | Delete operations disabled by default via policy flags | Safety-first; additive writes only until explicitly relaxed | Active |
@@ -514,6 +606,8 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-18 | No API-level Joplin seeding | Postgres seeding is the only supported seeding path; no API-level fallback | Active |
 | 2026-04-19 | Repository licensed under MPL-2.0 via root LICENSE file | Keeps licensing terms canonical in one file while package and docs point to the same source | Active |
 | 2026-04-19 | Conventional Commits adopted as commit message standard | Consistent history format enables changelog generation and clear intent signalling for agents and humans alike | Active |
+| 2026-04-19 | Add `unit-tests` as an independently runnable test stage | Fast wrapper validation should exist separately from live-service testing and be implementable first | Active |
+| 2026-04-19 | Add `tests` as the publish test gateway | Image publishing should depend on one test gate that represents both unit and integration suites passing together | Active |
 
 ---
 
@@ -527,7 +621,9 @@ None.
 
 - **Always read the front matter** at the top of this file to get current phase and next action.
 - **Run stages in dependency order.** Do not start a stage until its dependencies are complete.
-- **Do not skip blocking gates.** `integration-tests` and `pre-publish-checks` must both pass before `publish-image` runs.
+- **Do not skip blocking gates.** `tests` and `pre-publish-checks` must both pass before `publish-image` runs.
+- **Keep `unit-tests` and `integration-tests` independent.** The unit suite should be implemented first, but the integration stage must not depend on the unit stage to execute.
+- **Use `tests` when both suites should run together.** This stage is the unified test gateway and must report failures clearly.
 - **If fixture lock diverges**, fail and report — do not auto-update unless `--update-lock` is explicitly passed.
 - **After completing a stage**, update its status, record the completion date, and add a ledger entry.
 - **After completing any work session**, rewrite the Current State Snapshot to reflect actual state.

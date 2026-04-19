@@ -94,12 +94,14 @@ PostgreSQL
 |---|---|---|
 | `fixture-data` | ⬜ Not started | |
 | `build-mcp-image` | ⬜ Not started | |
+| `unit-tests` | ⬜ Not started | |
 | `build-integration-runner-image` | ⬜ Not started | |
 | `build-fixture-tooling-image` | ⬜ Not started | |
 | `postgres-service` | ⬜ Not started | |
 | `joplin-service` | ⬜ Not started | |
 | `mcp-service` | ⬜ Not started | |
 | `integration-tests` | ⬜ Not started | |
+| `tests` | ⬜ Not started | |
 | `pre-publish-checks` | ⬜ Not started | |
 | `publish-image` | ⬜ Not started | |
 | `publish-chart` | ⬜ Not started | |
