@@ -179,6 +179,23 @@ dagger call fixture-data --update-lock
 
 ---
 
+## Contributing
+
+This repository uses [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/).
+All commit messages must follow the format:
+
+```
+<type>[optional scope]: <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+Common types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`.
+
+---
+
 ## License
 
 This repository is currently licensed under the Mozilla Public License 2.0

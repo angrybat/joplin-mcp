@@ -39,6 +39,7 @@ Wrapper/runtime variables used by the code:
 - `READYZ_TIMEOUT_SECONDS` (default `2.0`)
 
 ## Working Conventions for Agents
+- Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) (`<type>[scope]: <description>`). Common types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `ci`.
 - Keep changes stage-scoped and aligned to [PLAN.md](PLAN.md) dependency order.
 - When implementation status changes, update status sections in [README.md](README.md) and stage/snapshot fields in [PLAN.md](PLAN.md).
 - Prefer minimal, deterministic changes; avoid incidental refactors.

@@ -513,6 +513,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-18 | Multi-arch image from the start | publish-image produces linux/amd64 + linux/arm64; build-mcp-image accepts `--platforms` argument | Active |
 | 2026-04-18 | No API-level Joplin seeding | Postgres seeding is the only supported seeding path; no API-level fallback | Active |
 | 2026-04-19 | Repository licensed under MPL-2.0 via root LICENSE file | Keeps licensing terms canonical in one file while package and docs point to the same source | Active |
+| 2026-04-19 | Conventional Commits adopted as commit message standard | Consistent history format enables changelog generation and clear intent signalling for agents and humans alike | Active |
 
 ---
 
