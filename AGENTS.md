@@ -27,6 +27,7 @@ Run from repository root:
 - Dagger pipeline entrypoint: [dagger/main.py](dagger/main.py)
 - Integration fixture guard: [tests/integration/conftest.py](tests/integration/conftest.py)
 - Helm chart: [chart/Chart.yaml](chart/Chart.yaml), [chart/values.yaml](chart/values.yaml)
+- Repository license: [LICENSE](LICENSE)
 
 ## Environment Expectations
 Wrapper/runtime variables used by the code:
@@ -42,3 +43,5 @@ Wrapper/runtime variables used by the code:
 - When implementation status changes, update status sections in [README.md](README.md) and stage/snapshot fields in [PLAN.md](PLAN.md).
 - Prefer minimal, deterministic changes; avoid incidental refactors.
 - If a task changes architecture or release behavior, add a Decision Log entry in [PLAN.md](PLAN.md).
+- Treat the root [LICENSE](LICENSE) file as the canonical source of repository licensing terms.
+- Keep [LICENSE](LICENSE), [pyproject.toml](pyproject.toml), and license references in README files in sync when licensing or distribution metadata changes.

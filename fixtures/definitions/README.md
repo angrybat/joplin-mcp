@@ -8,4 +8,7 @@
 #   - Free of wall-clock timestamps (use sentinel values like "2000-01-01T00:00:00Z")
 #   - Validated against fixture.lock before each test run
 #
+# Repository-wide licensing is defined by the root LICENSE file. These
+# fixture definitions are currently covered by MPL-2.0.
+#
 # See PLAN.md Stage: fixture-data for the full fixture contract.

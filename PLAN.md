@@ -1,7 +1,7 @@
 ---
 plan_id: joplin-mcp-release-pipeline
 status: not-started
-last_updated: 2026-04-18
+last_updated: 2026-04-19
 primary_audience:
   - humans
   - vscode_agents
@@ -491,6 +491,7 @@ _Append-only. Each entry records what changed, when, and why._
 **As of 2026-04-18:**
 - All stages: not started.
 - Documentation baseline: in progress.
+- Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
 - Next action: scaffold project directory structure and initialize Python project.
 
 ---
@@ -511,6 +512,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-18 | Combined publish-all stage removed | Partial release risk outweighed benefits; image and chart publish independently | Active |
 | 2026-04-18 | Multi-arch image from the start | publish-image produces linux/amd64 + linux/arm64; build-mcp-image accepts `--platforms` argument | Active |
 | 2026-04-18 | No API-level Joplin seeding | Postgres seeding is the only supported seeding path; no API-level fallback | Active |
+| 2026-04-19 | Repository licensed under MPL-2.0 via root LICENSE file | Keeps licensing terms canonical in one file while package and docs point to the same source | Active |
 
 ---
 
@@ -529,3 +531,4 @@ None.
 - **After completing a stage**, update its status, record the completion date, and add a ledger entry.
 - **After completing any work session**, rewrite the Current State Snapshot to reflect actual state.
 - **Do not implement anything outside the Included scope** without adding a decision log entry first.
+- **Treat the root LICENSE as canonical** and keep packaging metadata and README/agent references aligned with it.

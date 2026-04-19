@@ -176,3 +176,10 @@ dagger call fixture-data --update-lock
 - [Upstream joplin-mcp package](https://github.com/alondmnt/joplin-mcp)
 - [Joplin Server Data API](https://joplinapp.org/api/references/rest_api/)
 - [Dagger documentation](https://docs.dagger.io)
+
+---
+
+## License
+
+This repository is currently licensed under the Mozilla Public License 2.0
+(MPL-2.0). See the root [LICENSE](LICENSE) file for the full terms.

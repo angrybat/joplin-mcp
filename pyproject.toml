@@ -7,11 +7,15 @@ name = "joplin-mcp-wrapper"
 version = "0.1.0"
 description = "Kubernetes-ready wrapper for the alondmnt/joplin-mcp MCP server"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.12"
 dependencies = [
     "joplin-mcp==0.2.3",
     "starlette>=0.46.0",
     "uvicorn[standard]>=0.34.0",
+]
+classifiers = [
+    "License :: OSI Approved :: Mozilla Public License 2.0 (MPL 2.0)",
 ]
 
 [project.scripts]
