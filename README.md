@@ -55,6 +55,8 @@ PostgreSQL
 - Health endpoints are provided by the wrapper, keeping them independent of the MCP transport.
 - Joplin and Postgres versions are explicit inputs to the pipeline so compatibility is always tested against a known matrix.
 - All write operations are controlled by environment-variable policy flags; delete operations are disabled by default.
+- Fixture definitions are authored as Markdown notebook trees and transformed deterministically into seed + expected artifacts.
+- `fixtures/fixture.lock` is committed as the reviewed checksum baseline for generated fixture outputs.
 
 ---
 
@@ -77,7 +79,7 @@ PostgreSQL
 
 | Area | Status |
 |---|---|
-| Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill) |
+| Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | ✅ Complete (skeleton) |
 | Dagger pipeline | 🟡 Stage stubs only |
@@ -92,7 +94,7 @@ PostgreSQL
 
 | Stage | Status | Notes |
 |---|---|---|
-| `fixture-data` | ⬜ Not started | |
+| `fixture-data` | ⬜ Not started | Phase 1 docs aligned: Markdown definitions, deterministic SQL seed target, committed lock baseline, Pirate Fleet Logbook seed theme |
 | `build-mcp-image` | ⬜ Not started | |
 | `unit-tests` | ⬜ Not started | |
 | `build-integration-runner-image` | ⬜ Not started | |
@@ -174,6 +176,16 @@ dagger call integration-tests --joplin-version=3.x.x --postgres-version=16
 # Update fixture lock after intentional data changes
 dagger call fixture-data --update-lock
 ```
+
+---
+
+## Fixture Authoring Model
+
+- Canonical source files live under `fixtures/definitions/` as Markdown files in notebook-like folders.
+- Folder hierarchy maps to notebook hierarchy; Markdown files map to notes.
+- Fixture generation writes deterministic outputs to `fixtures/seed/` and `fixtures/expected/`.
+- `fixtures/fixture.lock` is committed and updated only through `dagger call fixture-data --update-lock`.
+- Initial themed fixture catalog is Pirate Fleet Logbook, including Captain Diary entries to validate narrative-style notes.
 
 ---
 

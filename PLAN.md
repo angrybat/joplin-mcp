@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: documentation-bootstrap
-next_action: Start fixture-data stage implementation in dagger pipeline
+current_phase: fixture-data-phase-1-complete
+next_action: Implement fixture-data generator and lock workflow in dagger/main.py
 ---
 
 # Joplin MCP — Execution Plan
@@ -44,7 +44,7 @@ next_action: Start fixture-data stage implementation in dagger pipeline
 |---|---|
 | **Dagger stage** | An isolated unit of pipeline work implemented as a Dagger function |
 | **Fixture** | Deterministic mock data used for both Postgres seeding and integration assertions |
-| **Fixture lock** | Checksum manifest that detects unexpected changes to expected test data |
+| **Fixture lock** | Committed checksum manifest for generated fixture artifacts used as a reviewed baseline |
 | **Fixture drift** | When expected outputs change silently without explicit review |
 | **Policy flag** | Environment variable that enables or disables a Joplin write capability |
 | **Blocking gate** | A stage that must pass before a publish stage may proceed |
@@ -96,6 +96,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - Supply chain checks are a **mandatory blocking gate** for image release.
 - Chart release is **independent** of image release cadence.
 - Joplin and Postgres versions are **explicit pipeline inputs**, never implicit.
+- Canonical fixture definitions are Markdown files in notebook-like folder trees under `fixtures/definitions/`.
 - Fixture lock divergence **always fails** unless `--update-lock` mode is explicitly set.
 - Delete operations on Joplin data are **disabled by default** in all policy configurations.
 
@@ -112,19 +113,20 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Purpose:** Generate the single source of truth for all integration test data. Produces both the Postgres seed inputs and the expected MCP response files used for assertions.
 
 **Inputs:**
-- Fixture definition files in `fixtures/definitions/`
+- Canonical Markdown fixture definitions in `fixtures/definitions/` (folder hierarchy maps to notebooks)
+- Deterministic fixture metadata from Markdown frontmatter (stable IDs, tags, policy flags)
 
 **Outputs:**
-- `fixtures/seed/` — SQL or structured data files for Postgres population
+- `fixtures/seed/` — Deterministic SQL seed files for Postgres population
 - `fixtures/expected/` — Expected MCP tool response files
-- `fixtures/fixture.lock` — Checksum manifest over all expected outputs
+- `fixtures/fixture.lock` — Committed checksum manifest over generated fixture outputs (`seed/` + `expected/`)
 - `fixtures/fixture-diff.md` — Human-readable diff report (produced on regeneration)
 
 **Depends on:** none
 
 **Success Criteria:**
 - All fixture files are generated deterministically (identical output on repeated runs with same inputs).
-- Fixture lock file matches generated checksums.
+- Fixture lock file matches generated checksums and is committed when fixture output changes are intentional.
 - No non-canonical values (e.g. unstable timestamps, random IDs) appear in outputs.
 
 **Failure Criteria:**
@@ -351,7 +353,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Inputs:**
 - Running MCP service from `mcp-service`
 - `fixtures/` directory mounted read-only at `/fixtures`
-- `fixtures/fixture.lock` for checksum validation
+- `fixtures/fixture.lock` committed baseline for checksum validation
 
 **Outputs:**
 - Test result report
@@ -364,7 +366,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Test Coverage:**
 - Tool discovery returns expected tools.
 - Read tool responses match `fixtures/expected/` contents.
-- Response checksums match `fixtures/fixture.lock`.
+- Response checksums match generated fixture outputs and the committed `fixtures/fixture.lock` baseline.
 - Allowed write operations succeed under correct policy flags.
 - Denied operations return explicit policy-denied messages.
 - Health probes: `/startupz`, `/livez`, `/readyz` behave correctly.
@@ -575,6 +577,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-19 | Added dedicated `unit-tests` and `integration-tests` stages plus a `tests` gateway stage that passes only when both suites pass. |
 | 2026-04-25 | Added canonical documentation sync skill in `SKILLS.md` and wired agent discovery in `AGENTS.md`; updated plan governance fields for ongoing work. |
 | 2026-04-28 | Moved Plan Progress Sync into the VS Code skill directory at `.github/skills/plan-progress-sync/SKILL.md`, refreshed companion docs, and documented slash-command discovery. |
+| 2026-04-28 | Completed fixture-data Phase 1 contract alignment: Markdown notebook-tree definitions, deterministic SQL seed output, committed lock baseline over generated outputs, and Pirate Fleet Logbook initial fixture theme with Captain Diary coverage. |
 
 ---
 
@@ -584,9 +587,9 @@ _Append-only. Each entry records what changed, when, and why._
 
 **As of 2026-04-28:**
 - All stages: not started.
-- Documentation baseline: in progress with Plan Progress Sync cataloged in `SKILLS.md` and implemented as a slash-discoverable skill in `.github/skills/plan-progress-sync/SKILL.md`.
+- Documentation baseline: fixture-data Phase 1 contract alignment complete (authoring model, lock behavior, and initial themed fixture catalog).
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
-- Next action: start fixture-data stage implementation in Dagger pipeline.
+- Next action: implement fixture-data generator and lock workflow in `dagger/main.py`.
 
 ---
 
@@ -611,6 +614,9 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-19 | Add `unit-tests` as an independently runnable test stage | Fast wrapper validation should exist separately from live-service testing and be implementable first | Active |
 | 2026-04-19 | Add `tests` as the publish test gateway | Image publishing should depend on one test gate that represents both unit and integration suites passing together | Active |
 | 2026-04-25 | Add Plan Progress Sync documentation skill | Keeps PLAN/README/AGENTS aligned with actual conversation progress, including divergence handling and doc expansion when gaps are found | Active |
+| 2026-04-28 | Canonical fixture definitions use Markdown notebook trees with frontmatter metadata | Keeps fixture authoring human-friendly while preserving deterministic transforms into seed and expected outputs | Active |
+| 2026-04-28 | `fixtures/fixture.lock` remains committed and validates generated fixture outputs | Provides a reviewed baseline to catch behavior drift beyond same-run consistency checks | Active |
+| 2026-04-28 | Initial fixture content theme is Pirate Fleet Logbook with Captain Diary notes | Makes fixture diffs more recognizable and ensures coverage of both operational and narrative Markdown content | Active |
 
 ---
 
