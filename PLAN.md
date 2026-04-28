@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: fixture-data-phase-1-complete
-next_action: Implement fixture-data generator and lock workflow in dagger/main.py
+current_phase: fixture-data-phase-2-contract-complete
+next_action: Implement fixture-data default generation path in dagger/main.py
 ---
 
 # Joplin MCP — Execution Plan
@@ -98,6 +98,8 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - Joplin and Postgres versions are **explicit pipeline inputs**, never implicit.
 - Canonical fixture definitions are Markdown files in notebook-like folder trees under `fixtures/definitions/`.
 - Fixture lock divergence **always fails** unless `--update-lock` mode is explicitly set.
+- Fixture lock checksum scope includes only generated artifacts in `fixtures/seed/**` and `fixtures/expected/**`.
+- `fixtures/definitions/**` files are canonical inputs but are excluded from fixture lock hashing.
 - Delete operations on Joplin data are **disabled by default** in all policy configurations.
 
 ---
@@ -119,19 +121,32 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Outputs:**
 - `fixtures/seed/` — Deterministic SQL seed files for Postgres population
 - `fixtures/expected/` — Expected MCP tool response files
-- `fixtures/fixture.lock` — Committed checksum manifest over generated fixture outputs (`seed/` + `expected/`)
-- `fixtures/fixture-diff.md` — Human-readable diff report (produced on regeneration)
+- `fixtures/fixture.lock` — Committed checksum manifest over generated fixture outputs (`seed/` + `expected/`) (written only in `--update-lock` mode)
+- `fixtures/fixture-diff.md` — Human-readable diff report (written only in `--update-lock` mode)
 
 **Depends on:** none
 
 **Success Criteria:**
 - All fixture files are generated deterministically (identical output on repeated runs with same inputs).
-- Fixture lock file matches generated checksums and is committed when fixture output changes are intentional.
+- Default mode (`dagger call fixture-data`) generates `seed/` and `expected/` without modifying `fixture.lock`.
+- Update mode (`dagger call fixture-data --update-lock`) regenerates `fixture.lock` and `fixture-diff.md` from generated outputs.
+- Fixture lock file matches generated checksums for `seed/` and `expected/` and is committed when fixture output changes are intentional.
 - No non-canonical values (e.g. unstable timestamps, random IDs) appear in outputs.
 
 **Failure Criteria:**
 - Non-deterministic output detected between runs.
+- Lock file is missing in default mode (must instruct operator to run `dagger call fixture-data --update-lock`).
 - Fixture lock mismatch without `--update-lock` flag.
+
+**Execution Modes:**
+- **Default mode:** `dagger call fixture-data`
+  - Generates `fixtures/seed/` and `fixtures/expected/`.
+  - Compares checksums for generated outputs against `fixtures/fixture.lock`.
+  - Does not create or modify lock files.
+- **Update mode:** `dagger call fixture-data --update-lock`
+  - Generates `fixtures/seed/` and `fixtures/expected/`.
+  - Regenerates `fixtures/fixture.lock` from generated output checksums.
+  - Regenerates `fixtures/fixture-diff.md` for review.
 
 ---
 
@@ -353,7 +368,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Inputs:**
 - Running MCP service from `mcp-service`
 - `fixtures/` directory mounted read-only at `/fixtures`
-- `fixtures/fixture.lock` committed baseline for checksum validation
+- `fixtures/fixture.lock` committed baseline for checksum validation of generated outputs
 
 **Outputs:**
 - Test result report
@@ -366,7 +381,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Test Coverage:**
 - Tool discovery returns expected tools.
 - Read tool responses match `fixtures/expected/` contents.
-- Response checksums match generated fixture outputs and the committed `fixtures/fixture.lock` baseline.
+- Checksums for generated outputs in `fixtures/expected/` and `fixtures/seed/` match the committed `fixtures/fixture.lock` baseline.
 - Allowed write operations succeed under correct policy flags.
 - Denied operations return explicit policy-denied messages.
 - Health probes: `/startupz`, `/livez`, `/readyz` behave correctly.
@@ -578,6 +593,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-25 | Added canonical documentation sync skill in `SKILLS.md` and wired agent discovery in `AGENTS.md`; updated plan governance fields for ongoing work. |
 | 2026-04-28 | Moved Plan Progress Sync into the VS Code skill directory at `.github/skills/plan-progress-sync/SKILL.md`, refreshed companion docs, and documented slash-command discovery. |
 | 2026-04-28 | Completed fixture-data Phase 1 contract alignment: Markdown notebook-tree definitions, deterministic SQL seed output, committed lock baseline over generated outputs, and Pirate Fleet Logbook initial fixture theme with Captain Diary coverage. |
+| 2026-04-28 | Completed fixture-data Phase 2 contract alignment: added explicit default/update execution modes, lock hash scope (`seed` + `expected` only), missing-lock failure behavior, and documented lock update/export commands. |
 
 ---
 
@@ -587,9 +603,9 @@ _Append-only. Each entry records what changed, when, and why._
 
 **As of 2026-04-28:**
 - All stages: not started.
-- Documentation baseline: fixture-data Phase 1 contract alignment complete (authoring model, lock behavior, and initial themed fixture catalog).
+- Documentation baseline: fixture-data Phases 1-2 contract alignment complete (authoring model, lock behavior, hash scope, and operator workflow).
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
-- Next action: implement fixture-data generator and lock workflow in `dagger/main.py`.
+- Next action: implement fixture-data default generation path in `dagger/main.py`.
 
 ---
 
@@ -617,12 +633,22 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-28 | Canonical fixture definitions use Markdown notebook trees with frontmatter metadata | Keeps fixture authoring human-friendly while preserving deterministic transforms into seed and expected outputs | Active |
 | 2026-04-28 | `fixtures/fixture.lock` remains committed and validates generated fixture outputs | Provides a reviewed baseline to catch behavior drift beyond same-run consistency checks | Active |
 | 2026-04-28 | Initial fixture content theme is Pirate Fleet Logbook with Captain Diary notes | Makes fixture diffs more recognizable and ensures coverage of both operational and narrative Markdown content | Active |
+| 2026-04-28 | fixture-data runs in default and update-lock modes | Separates artifact generation from lock regeneration so lock updates are explicit and reviewable | Active |
+| 2026-04-28 | fixture.lock checksum scope is generated outputs only (`seed/**`, `expected/**`) | Prevents source definition hashing from conflicting with generated-output contract | Active |
 
 ---
 
 ## Open Questions
 
 None.
+
+---
+
+## Fixture Lock Commands
+
+- Drift check and generate artifacts (no lock writes): `dagger call fixture-data`
+- Regenerate lock and diff artifacts: `dagger call fixture-data --update-lock`
+- Export regenerated fixture artifacts to workspace for commit: `dagger call fixture-data --update-lock export --path=./fixtures`
 
 ---
 
