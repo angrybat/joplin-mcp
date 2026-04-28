@@ -1,7 +1,7 @@
 ---
 plan_id: joplin-mcp-release-pipeline
-status: not-started
-last_updated: 2026-04-19
+status: in-progress
+last_updated: 2026-04-28
 primary_audience:
   - humans
   - vscode_agents
@@ -13,7 +13,7 @@ release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
 current_phase: documentation-bootstrap
-next_action: Add new skill for updating progress documentation
+next_action: Start fixture-data stage implementation in dagger pipeline
 ---
 
 # Joplin MCP — Execution Plan
@@ -573,6 +573,8 @@ _Append-only. Each entry records what changed, when, and why._
 |---|---|
 | 2026-04-18 | Plan created. Project status set to not-started. |
 | 2026-04-19 | Added dedicated `unit-tests` and `integration-tests` stages plus a `tests` gateway stage that passes only when both suites pass. |
+| 2026-04-25 | Added canonical documentation sync skill in `SKILLS.md` and wired agent discovery in `AGENTS.md`; updated plan governance fields for ongoing work. |
+| 2026-04-28 | Moved Plan Progress Sync into the VS Code skill directory at `.github/skills/plan-progress-sync/SKILL.md`, refreshed companion docs, and documented slash-command discovery. |
 
 ---
 
@@ -580,11 +582,11 @@ _Append-only. Each entry records what changed, when, and why._
 
 > **Rewrite this section** each time implementation state changes.
 
-**As of 2026-04-18:**
+**As of 2026-04-28:**
 - All stages: not started.
-- Documentation baseline: in progress.
+- Documentation baseline: in progress with Plan Progress Sync cataloged in `SKILLS.md` and implemented as a slash-discoverable skill in `.github/skills/plan-progress-sync/SKILL.md`.
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
-- Next action: scaffold project directory structure and initialize Python project.
+- Next action: start fixture-data stage implementation in Dagger pipeline.
 
 ---
 
@@ -608,6 +610,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-19 | Conventional Commits adopted as commit message standard | Consistent history format enables changelog generation and clear intent signalling for agents and humans alike | Active |
 | 2026-04-19 | Add `unit-tests` as an independently runnable test stage | Fast wrapper validation should exist separately from live-service testing and be implementable first | Active |
 | 2026-04-19 | Add `tests` as the publish test gateway | Image publishing should depend on one test gate that represents both unit and integration suites passing together | Active |
+| 2026-04-25 | Add Plan Progress Sync documentation skill | Keeps PLAN/README/AGENTS aligned with actual conversation progress, including divergence handling and doc expansion when gaps are found | Active |
 
 ---
 

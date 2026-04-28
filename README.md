@@ -73,11 +73,11 @@ PostgreSQL
 ## Current Status
 
 > **Project state: IN PROGRESS**
-> Last updated: 2026-04-18
+> Last updated: 2026-04-28
 
 | Area | Status |
 |---|---|
-| Documentation | ✅ Complete |
+| Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | ✅ Complete (skeleton) |
 | Dagger pipeline | 🟡 Stage stubs only |
@@ -114,6 +114,11 @@ PostgreSQL
 joplin-mcp/
 ├── README.md                   # This file — project overview and status
 ├── PLAN.md                     # Detailed execution plan and stage contracts
+├── SKILLS.md                   # Human-readable skill catalog and usage notes
+├── .github/
+│   └── skills/
+│       └── plan-progress-sync/
+│           └── SKILL.md        # Slash-discoverable VS Code skill implementation
 ├── src/
 │   └── joplin_mcp_wrapper/     # Python wrapper application
 │       ├── __init__.py
@@ -175,6 +180,8 @@ dagger call fixture-data --update-lock
 ## Links
 
 - [Detailed Execution Plan](PLAN.md)
+- [Agent Skills Catalog](SKILLS.md)
+- [Plan Progress Sync Skill](.github/skills/plan-progress-sync/SKILL.md)
 - [Upstream joplin-mcp package](https://github.com/alondmnt/joplin-mcp)
 - [Joplin Server Data API](https://joplinapp.org/api/references/rest_api/)
 - [Dagger documentation](https://docs.dagger.io)

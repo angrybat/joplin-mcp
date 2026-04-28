@@ -46,3 +46,9 @@ Wrapper/runtime variables used by the code:
 - If a task changes architecture or release behavior, add a Decision Log entry in [PLAN.md](PLAN.md).
 - Treat the root [LICENSE](LICENSE) file as the canonical source of repository licensing terms.
 - Keep [LICENSE](LICENSE), [pyproject.toml](pyproject.toml), and license references in README files in sync when licensing or distribution metadata changes.
+
+## Agent Skills
+- The skill catalog lives in [SKILLS.md](SKILLS.md); slash-discoverable skill implementations live under `.github/skills/`.
+- Use **Plan Progress Sync** after meaningful work sessions to reconcile conversation progress with [PLAN.md](PLAN.md) and synchronize [README.md](README.md).
+- If implementation diverges from the written plan but remains valid, update documentation to reflect reality and record rationale as required by [PLAN.md](PLAN.md).
+- Expand companion documentation when conversation evidence reveals missing guidance or outdated contracts.
