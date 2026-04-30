@@ -1,0 +1,5 @@
+{
+    "name": "joplin-mcp",
+    "sdk": "python",
+    "source": "dagger"
+}

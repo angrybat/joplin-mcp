@@ -17,14 +17,14 @@ This repository builds and publishes a hosted Joplin MCP server using a Python w
 ## Build/Test Commands
 Run from repository root:
 
-- `dagger call fixture-data --update-lock`
+- `dagger call fixture-data --source=. --update-lock`
 - `dagger call integration-tests --joplin-version=3.x.x --postgres-version=16`
 - `dagger call publish-image --joplin-version=3.x.x --postgres-version=16`
 
 ## Key Paths
 - Wrapper runtime: [src/joplin_mcp_wrapper/main.py](src/joplin_mcp_wrapper/main.py)
 - Health probes: [src/joplin_mcp_wrapper/health.py](src/joplin_mcp_wrapper/health.py)
-- Dagger pipeline entrypoint: [dagger/main.py](dagger/main.py)
+- Dagger pipeline entrypoint: [dagger/src/joplin_mcp/__init__.py](dagger/src/joplin_mcp/__init__.py)
 - Integration fixture guard: [tests/integration/conftest.py](tests/integration/conftest.py)
 - Helm chart: [chart/Chart.yaml](chart/Chart.yaml), [chart/values.yaml](chart/values.yaml)
 - Repository license: [LICENSE](LICENSE)

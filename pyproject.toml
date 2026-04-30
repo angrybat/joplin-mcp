@@ -10,7 +10,7 @@ readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.12"
 dependencies = [
-    "joplin-mcp==0.2.3",
+    "joplin-mcp==0.7.1",
     "starlette>=0.46.0",
     "uvicorn[standard]>=0.34.0",
 ]
