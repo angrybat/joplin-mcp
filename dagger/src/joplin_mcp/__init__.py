@@ -27,6 +27,7 @@ class JoplinMcp:
             .with_mounted_cache("/root/.cache/uv", uv_cache)
             .with_mounted_cache("/opt/venv", venv_cache)
             .with_env_variable("UV_CACHE_DIR", "/root/.cache/uv")
+            .with_env_variable("UV_LINK_MODE", "copy")
             .with_env_variable("VIRTUAL_ENV", "/opt/venv")
             .with_env_variable(
                 "PATH",
@@ -88,7 +89,7 @@ class JoplinMcp:
             raise ValueError("verbosity must be >= 0")
 
         capped_verbosity = min(verbosity, 3)
-        pytest_args = ["tests/unit/test_main.py", "--color=yes", "-W", "default"]
+        pytest_args = ["tests/unit", "--color=yes", "-W", "default"]
         if capped_verbosity > 0:
             pytest_args.insert(0, f"-{'v' * capped_verbosity}")
 
