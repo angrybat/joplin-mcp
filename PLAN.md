@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: fixture-data-phase-1-fixture-inputs-in-progress
-next_action: Author and validate canonical fixture definitions under fixtures/definitions/, then implement update-lock mode to establish the first fixture.lock baseline
+current_phase: fixture-data-phase-2-update-lock-implementation-in-progress
+next_action: Implement fixture-data update-lock mode to generate fixture.lock and fixture-diff.md from seed/expected outputs, then validate default mode against the new lock baseline
 ---
 
 # Joplin MCP — Execution Plan
@@ -597,6 +597,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-28 | Started fixture-data Phase 3 implementation in `dagger/main.py`: default mode now generates deterministic `seed/` and `expected/` outputs and validates lock divergence against generated artifact checksums; update-lock mode remains pending. |
 | 2026-04-30 | Refactored fixture-data Phase 3 implementation to run generation and lock validation inside a Python container via `dagger/src/joplin_mcp/__init__.py` and `src/scripts/generate_fixture_data.py`, consolidating fixture logic into a single script and using repo-root directory input (`--source`). End-to-end pass evidence is still pending because `dagger call fixture-data --source=.` currently exits non-zero. |
 | 2026-05-09 | Implemented Dagger stage implementation guardrails: (1) documented Stage Implementation Pattern in AGENTS.md with flexible source directory requirement (required only when stages read repo files; optional for external-command-only stages); (2) created validation script `.github/scripts/validate-dagger-stage-pattern.py` to automatically detect forbidden patterns (`dag.host()`, parent traversal, `dag.current_module().source()`); (3) created stage scaffold template at `.github/templates/STAGE_SCAFFOLD.py` with both patterns (repo-file-reading and external-command-only); (4) added Decision Log entry documenting mandatory pattern with architectural rationale. Validation script tested and passes. |
+| 2026-05-09 | Completed fixture-data Phase 1 implementation by authoring the full 13-note Pirate Fleet Logbook catalog under `fixtures/definitions/` and validating parser compatibility via `read_markdown_definitions` in `src/scripts/generate_fixture_data.py` (13 definitions loaded successfully). |
 
 ---
 
@@ -605,12 +606,12 @@ _Append-only. Each entry records what changed, when, and why._
 > **Rewrite this section** each time implementation state changes.
 
 **As of 2026-05-09:**
-- `fixture-data`: in progress (containerized script-based default mode implemented with repo-root source directory input; `dagger call fixture-data --source=.` is still failing with exit code 1, and update-lock mode remains pending).
+- `fixture-data`: in progress (containerized script-based default mode implemented with repo-root source directory input; canonical 13-note fixture definitions are now authored and parser validation succeeds; update-lock mode remains pending and blocks first successful default-mode lock validation).
 - Remaining stages: not started.
 - Documentation baseline: fixture-data Phases 1-2 contract alignment complete; Phase 3 architecture refactored to containerized script execution.
 - Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
-- Next action: complete Phase 1 by authoring and validating canonical fixture definitions, then implement update-lock mode to establish the first lock baseline before default-mode validation.
+- Next action: implement update-lock mode to generate lock and diff artifacts, then validate default mode against the generated lock baseline.
 
 ---
 
