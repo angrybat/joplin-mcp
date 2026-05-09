@@ -73,7 +73,7 @@ def read_markdown_definitions(definitions_root: Path) -> list[dict[str, object]]
     for note_file in note_files:
         rel = note_file.relative_to(definitions_root)
         notebook_path = "/".join(rel.parts[:-1])
-        source_path = f"fixtures/definitions/{str(rel).replace('\\\\', '/')}"
+        source_path = f"fixtures/definitions/{rel.as_posix()}"
         parsed = parse_frontmatter(note_file.read_text(encoding="utf-8"), source_path)
 
         required = ["slug", "title", "created", "updated"]
@@ -251,25 +251,28 @@ def render_lock_file(checksums: dict[str, str]) -> str:
     return "\n".join(lines)
 
 
-def render_lock_diff(actual: dict[str, str], locked: dict[str, str]) -> str:
+def render_definition_report(notes: list[dict[str, object]], actual: dict[str, str], locked: dict[str, str]) -> str:
     lines = [
-        "# Fixture Lock Diff",
+        "# Fixture Definitions Review",
         "",
-        "This report compares generated fixture output checksums against the committed lock baseline.",
+        "This report centers the canonical Markdown fixture definitions that drive generated fixture outputs.",
         "",
-        "## Generated Checksums",
+        "## Definition Inventory",
         "",
     ]
 
-    if actual:
-        for rel_path in sorted(actual):
-            lines.append(f"- `{rel_path}`: `{actual[rel_path]}`")
+    if notes:
+        for note in notes:
+            tags = ", ".join(note["tags"]) if note["tags"] else "(none)"
+            lines.append(
+                f"- `{note['source_path']}` | notebook: `{note['notebook_path']}` | slug: `{note['slug']}` | title: `{note['title']}` | tags: `{tags}`"
+            )
     else:
-        lines.append("- No generated outputs found.")
+        lines.append("- No fixture definitions found.")
 
     lines.extend([
         "",
-        "## Lock Comparison",
+        "## Output Validation",
         "",
     ])
 
@@ -278,20 +281,30 @@ def render_lock_diff(actual: dict[str, str], locked: dict[str, str]) -> str:
     changed = sorted(key for key in actual if key in locked and actual[key] != locked[key])
 
     if not added and not removed and not changed:
-        lines.append("- No differences detected.")
+        lines.append("- Generated output checksums match the committed baseline.")
     else:
+        lines.append("- Generated output checksum changes detected from the current definition set:")
         if added:
-            lines.append("- Added entries:")
             for rel_path in added:
-                lines.append(f"  - `{rel_path}`")
+                lines.append(f"  - Added `{rel_path}`")
         if removed:
-            lines.append("- Removed entries:")
             for rel_path in removed:
-                lines.append(f"  - `{rel_path}`")
+                lines.append(f"  - Removed `{rel_path}`")
         if changed:
-            lines.append("- Changed entries:")
             for rel_path in changed:
-                lines.append(f"  - `{rel_path}`")
+                lines.append(f"  - Changed `{rel_path}`")
+
+    lines.extend([
+        "",
+        "## Generated Checksums",
+        "",
+    ])
+
+    if actual:
+        for rel_path in sorted(actual):
+            lines.append(f"- `{rel_path}`: `{actual[rel_path]}`")
+    else:
+        lines.append("- No generated outputs found.")
 
     lines.append("")
     return "\n".join(lines)
@@ -370,7 +383,7 @@ def main() -> None:
             encoding="utf-8",
         )
         (output_fixtures_root / "fixture-diff.md").write_text(
-            render_lock_diff(actual, locked),
+            render_definition_report(notes, actual, locked),
             encoding="utf-8",
         )
     else:
