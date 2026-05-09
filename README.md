@@ -82,7 +82,7 @@ PostgreSQL
 | Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | ✅ Complete (skeleton) |
-| Dagger pipeline | 🟡 fixture-data refactored to containerized script execution with repo-root source input; default-mode run is still failing and remaining stages are stubs |
+| Dagger pipeline | 🟡 fixture-data refactored to containerized script execution with repo-root source input; update-lock path is still pending, so first default-mode lock validation cannot succeed yet, and remaining stages are stubs |
 | Helm chart | 🟡 Skeleton only |
 | Integration tests | 🟡 Skeleton only |
 | Published image | ⬜ Not started |
@@ -94,7 +94,7 @@ PostgreSQL
 
 | Stage | Status | Notes |
 |---|---|---|
-| `fixture-data` | 🟡 In progress | Containerized generation and lock validation implemented in `dagger/src/joplin_mcp/__init__.py` via `src/scripts/generate_fixture_data.py`, using `--source=.` input; update-lock mode pending and current default-mode run still exits non-zero |
+| `fixture-data` | 🟡 In progress | Containerized generation and lock validation implemented in `dagger/src/joplin_mcp/__init__.py` via `src/scripts/generate_fixture_data.py`, using `--source=.` input; update-lock mode is the current blocker, and default-mode validation is expected after the first lock baseline is generated |
 | `build-mcp-image` | ⬜ Not started | |
 | `unit-tests` | ⬜ Not started | |
 | `build-integration-runner-image` | ⬜ Not started | |

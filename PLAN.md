@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: fixture-data-phase-3-default-path-in-progress
-next_action: Debug and fix fixture-data default-mode execution (currently exits non-zero), then implement update-lock path and validate with end-to-end test
+current_phase: fixture-data-phase-1-fixture-inputs-in-progress
+next_action: Author and validate canonical fixture definitions under fixtures/definitions/, then implement update-lock mode to establish the first fixture.lock baseline
 ---
 
 # Joplin MCP — Execution Plan
@@ -610,7 +610,7 @@ _Append-only. Each entry records what changed, when, and why._
 - Documentation baseline: fixture-data Phases 1-2 contract alignment complete; Phase 3 architecture refactored to containerized script execution.
 - Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
-- Next action: debug and fix fixture-data default-mode execution to resolve exit code 1, then implement update-lock mode and validate end-to-end; all future stages will follow established pattern and use validation script to enforce boundaries.
+- Next action: complete Phase 1 by authoring and validating canonical fixture definitions, then implement update-lock mode to establish the first lock baseline before default-mode validation.
 
 ---
 
