@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: fixture-data-complete
-next_action: Execute parallel phases — build-mcp-image and unit-tests can proceed independently; postgres-service stage will depend on fixtures/seed/ mounting
+current_phase: unit-tests-complete
+next_action: Begin build-mcp-image stage implementation and validate wrapper startup plus health endpoints in-container.
 ---
 
 # Joplin MCP — Execution Plan
@@ -108,9 +108,9 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 ### Stage: `fixture-data`
 
-**Status:** 🟡 In progress
+**Status:** ✅ Complete
 **Started:** 2026-04-28
-**Completed:** —
+**Completed:** 2026-05-09
 
 **Purpose:** Generate the single source of truth for all integration test data. Produces both the Postgres seed inputs and the expected MCP response files used for assertions.
 
@@ -602,6 +602,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-05-09 | Completed fixture-data Phase 4 (guardrails & handoff): fixed integration fixture guard scope in `tests/integration/conftest.py` to validate generated outputs (`seed/` + `expected/`) against committed lock checksums (not definitions); conftest guard validation passed with no lock divergence detected; updated PLAN.md and README.md with completion evidence; fixture-data stage is now complete and unblocks parallel execution of build-mcp-image and unit-tests. |
 | 2026-05-09 | Completed unit-tests Phase 2: added `unit_tests(source)` Dagger function in `dagger/src/joplin_mcp/__init__.py` that runs `tests/unit/test_main.py` in a Python 3.12 container after installing test dependencies including `pytest-asyncio`; fixed async return handling by awaiting `.stdout()`; validation evidence: `dagger call unit-tests --source=.` completed successfully with `1 passed` and no `asyncio_mode` warning in containerized output. |
 | 2026-05-09 | Completed unit-tests Phase 3: implemented remaining wrapper unit-test coverage with new `src/joplin_mcp_wrapper/health.py` readiness/cache helpers and expanded `src/joplin_mcp_wrapper/main.py` command + supervisor state primitives; added `tests/unit/test_health.py` and expanded `tests/unit/test_main.py`; broadened Dagger unit test execution to `tests/unit`; validation evidence: local `pytest tests/unit -q` => `6 passed` and `dagger call unit-tests --source .` => `6 passed`. |
+| 2026-05-09 | Refined unit-tests for clearer state isolation: split combined assertions into focused per-state tests in `tests/unit/test_main.py` and `tests/unit/test_health.py`; validation evidence: `dagger call unit-tests --source .` => `15 passed` across full `tests/unit` suite. |
 
 ---
 
@@ -611,7 +612,7 @@ _Append-only. Each entry records what changed, when, and why._
 
 **As of 2026-05-09:**
 - `fixture-data`: ✅ complete (end-to-end containerized generation with default and update-lock modes fully implemented; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed under `fixtures/definitions/`; deterministic SQL seed and expected MCP outputs generated and committed; fixture.lock baseline committed with SHA256 checksums for `fixtures/seed/seed.sql` and `fixtures/expected/notes.json`; integration fixture guard fixed and validated against committed lock with no divergence; ready to unblock parallel phases build-mcp-image and unit-tests).
-- `unit-tests`: ✅ complete (Phase 1 env validation baseline plus Phase 3 coverage for command construction, supervisor state transitions, health responses, and readiness caching; validation: `pytest tests/unit -q` and `dagger call unit-tests --source .` both pass with 6 tests).
+- `unit-tests`: ✅ complete (Phase 1 env validation baseline plus Phase 3 coverage for command construction, supervisor state transitions, health responses, and readiness caching; suite refined into focused state tests; validation: `dagger call unit-tests --source .` passes with 15 tests).
 - Remaining stages: not started.
 - Documentation baseline: fixture-data Phases 1-2 contract alignment complete; Phase 3 architecture refactored to containerized script execution.
 - Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.

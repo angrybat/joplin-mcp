@@ -96,7 +96,7 @@ PostgreSQL
 |---|---|---|
 | `fixture-data` | ✅ Complete | Containerized generation with default and update-lock modes fully implemented in `dagger/src/joplin_mcp/__init__.py` and `src/scripts/generate_fixture_data.py`; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed; fixture.lock baseline committed with SHA256 checksums for generated outputs; integration fixture guard fixed to validate `fixtures/seed/` and `fixtures/expected/` against committed lock (no divergence detected); ready to unblock build-mcp-image and unit-tests parallel execution |
 | `build-mcp-image` | ⬜ Not started | |
-| `unit-tests` | ✅ Complete | Added wrapper unit coverage for env validation, command construction, supervisor state transitions, health probe responses, and readiness caching via `tests/unit/test_main.py` and `tests/unit/test_health.py`; Dagger stage now runs full `tests/unit` suite with passing evidence (`dagger call unit-tests --source .` => `6 passed`) |
+| `unit-tests` | ✅ Complete | Added wrapper unit coverage for env validation, command construction, supervisor state transitions, health probe responses, and readiness caching via `tests/unit/test_main.py` and `tests/unit/test_health.py`; tests were refined into focused state-specific cases; Dagger stage runs full `tests/unit` suite with passing evidence (`dagger call unit-tests --source .` => `15 passed`) |
 | `build-integration-runner-image` | ⬜ Not started | |
 | `build-fixture-tooling-image` | ⬜ Not started | |
 | `postgres-service` | ⬜ Not started | |
