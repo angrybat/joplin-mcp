@@ -159,10 +159,14 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Purpose:** Build the Joplin MCP wrapper Docker image from pinned dependencies.
 
 **Inputs:**
+- `--source` pipeline argument (repository root directory)
 - `src/joplin_mcp_wrapper/` — wrapper source code
 - `pyproject.toml` — pinned `joplin-mcp` version
 - Pinned Python base image reference
 - `--platforms` pipeline argument (default: `linux/amd64,linux/arm64`)
+
+**Function Contract:**
+- `build-mcp-image(source, platforms="linux/amd64,linux/arm64") -> dagger.Container`
 
 **Outputs:**
 - OCI image artifact

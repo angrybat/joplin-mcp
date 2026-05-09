@@ -51,7 +51,11 @@ class JoplinMcp:
         )
 
     @function
-    async def build_mcp_image(self) -> dagger.Container:
+    async def build_mcp_image(
+        self,
+        source: dagger.Directory,
+        platforms: str = "linux/amd64,linux/arm64",
+    ) -> dagger.Container:
         raise NotImplementedError("build_mcp_image not yet implemented — see PLAN.md Phase 2")
 
     @function
