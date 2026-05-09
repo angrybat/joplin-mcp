@@ -9,11 +9,14 @@ class JoplinMcp:
 
     def _python_container(self, source: dagger.Directory) -> dagger.Container:
         python_version = "3.12.9-slim"
+        pip_cache = dag.cache_volume("pip-cache-py312")
         return (
             dag.container()
             .from_(f"python:{python_version}")
             .with_mounted_directory("/workspace", source)
             .with_workdir("/workspace")
+            .with_mounted_cache("/root/.cache/pip", pip_cache)
+            .with_env_variable("PIP_DISABLE_PIP_VERSION_CHECK", "1")
         )
 
     @function
