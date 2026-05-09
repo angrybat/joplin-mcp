@@ -59,10 +59,7 @@ class JoplinMcp:
                     "-m",
                     "pip",
                     "install",
-                    "pytest>=8.0",
-                    "pytest-asyncio>=0.25",
-                    "httpx>=0.27",
-                    "dagger-io>=0.15.0",
+                    ".[unit-tests]",
                 ]
             )
             .with_exec(
