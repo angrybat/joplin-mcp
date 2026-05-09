@@ -82,7 +82,7 @@ PostgreSQL
 | Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | ✅ Complete (skeleton) |
-| Dagger pipeline | 🟡 fixture-data refactored to containerized script execution with repo-root source input; canonical fixture definitions are now authored and parser-validated, update-lock path is still pending, and remaining stages are stubs |
+| Dagger pipeline | 🟡 fixture-data refactored to containerized script execution with repo-root source input; canonical fixture definitions are now authored and parser-validated, update-lock generation is implemented, and remaining stages are stubs |
 | Helm chart | 🟡 Skeleton only |
 | Integration tests | 🟡 Skeleton only |
 | Published image | ⬜ Not started |
@@ -94,7 +94,7 @@ PostgreSQL
 
 | Stage | Status | Notes |
 |---|---|---|
-| `fixture-data` | 🟡 In progress | Containerized generation and lock validation implemented in `dagger/src/joplin_mcp/__init__.py` via `src/scripts/generate_fixture_data.py`, using `--source=.` input; all 13 canonical fixture definition files under `fixtures/definitions/` are now present and parser-compatible; update-lock mode is the current blocker before first default-mode lock validation |
+| `fixture-data` | 🟡 In progress | Containerized generation and lock validation implemented in `dagger/src/joplin_mcp/__init__.py` via `src/scripts/generate_fixture_data.py`, using `--source=.` input; all 13 canonical fixture definition files under `fixtures/definitions/` are present and parser-compatible; update-lock generation is implemented and default-mode validation against the new lock baseline is next |
 | `build-mcp-image` | ⬜ Not started | |
 | `unit-tests` | ⬜ Not started | |
 | `build-integration-runner-image` | ⬜ Not started | |
