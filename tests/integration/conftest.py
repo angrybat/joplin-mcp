@@ -17,13 +17,18 @@ LOCK_FILE = FIXTURES_ROOT / "fixture.lock"
 
 
 def _compute_fixture_checksums() -> dict[str, str]:
-    """Return sha256 checksums for all fixture definition files."""
+    """Return sha256 checksums for generated fixture output files (seed/ + expected/)."""
     checksums: dict[str, str] = {}
-    for path in sorted((FIXTURES_ROOT / "definitions").rglob("*")):
-        if path.is_file() and not path.name.startswith("."):
-            rel = path.relative_to(FIXTURES_ROOT)
-            digest = hashlib.sha256(path.read_bytes()).hexdigest()
-            checksums[str(rel).replace("\\", "/")] = digest
+    for subdir in ["seed", "expected"]:
+        subdir_path = FIXTURES_ROOT / subdir
+        if not subdir_path.exists():
+            continue
+        for path in sorted(subdir_path.rglob("*")):
+            if path.is_file() and not path.name.startswith("."):
+                rel = path.relative_to(FIXTURES_ROOT)
+                lock_path = f"fixtures/{rel}".replace("\\", "/")
+                digest = hashlib.sha256(path.read_bytes()).hexdigest()
+                checksums[lock_path] = digest
     return checksums
 
 

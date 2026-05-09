@@ -75,14 +75,14 @@ PostgreSQL
 ## Current Status
 
 > **Project state: IN PROGRESS**
-> Last updated: 2026-05-09
+> Last updated: 2026-05-09 — fixture-data phase complete, parallel phases (build-mcp-image, unit-tests) ready
 
 | Area | Status |
 |---|---|
 | Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | ✅ Complete (skeleton) |
-| Dagger pipeline | 🟡 fixture-data refactored to containerized script execution with repo-root source input; canonical fixture definitions are now authored and parser-validated, update-lock generation is implemented, and remaining stages are stubs |
+| Dagger pipeline | 🟡 fixture-data ✅ complete; build-mcp-image and unit-tests ready for parallel execution; remaining stages are stubs |
 | Helm chart | 🟡 Skeleton only |
 | Integration tests | 🟡 Skeleton only |
 | Published image | ⬜ Not started |
@@ -94,7 +94,7 @@ PostgreSQL
 
 | Stage | Status | Notes |
 |---|---|---|
-| `fixture-data` | 🟡 In progress | Containerized generation and lock validation implemented in `dagger/src/joplin_mcp/__init__.py` via `src/scripts/generate_fixture_data.py`, using `--source=.` input; all 13 canonical fixture definition files under `fixtures/definitions/` are present and parser-compatible; update-lock generation is implemented and default-mode validation against the new lock baseline is next |
+| `fixture-data` | ✅ Complete | Containerized generation with default and update-lock modes fully implemented in `dagger/src/joplin_mcp/__init__.py` and `src/scripts/generate_fixture_data.py`; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed; fixture.lock baseline committed with SHA256 checksums for generated outputs; integration fixture guard fixed to validate `fixtures/seed/` and `fixtures/expected/` against committed lock (no divergence detected); ready to unblock build-mcp-image and unit-tests parallel execution |
 | `build-mcp-image` | ⬜ Not started | |
 | `unit-tests` | ⬜ Not started | |
 | `build-integration-runner-image` | ⬜ Not started | |
