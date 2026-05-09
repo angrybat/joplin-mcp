@@ -19,6 +19,36 @@ class JoplinMcp:
             .with_env_variable("PIP_DISABLE_PIP_VERSION_CHECK", "1")
         )
 
+    async def _python_uv_container(self, source: dagger.Directory) -> dagger.Container:
+        uv_cache = dag.cache_volume("uv-cache-py312")
+        venv_cache = dag.cache_volume("venv-py312")
+        container = (
+            self._python_container(source)
+            .with_mounted_cache("/root/.cache/uv", uv_cache)
+            .with_mounted_cache("/opt/venv", venv_cache)
+            .with_env_variable("UV_CACHE_DIR", "/root/.cache/uv")
+            .with_env_variable("VIRTUAL_ENV", "/opt/venv")
+            .with_env_variable(
+                "PATH",
+                "/opt/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin",
+            )
+        )
+
+        uv_exists = await (
+            container
+            .with_exec(["sh", "-lc", "test -x /opt/venv/bin/uv && printf true || printf false"])
+            .stdout()
+        )
+
+        if uv_exists.strip() == "true":
+            return container
+
+        return (
+            container
+            .with_exec(["python", "-m", "venv", "/opt/venv"])
+            .with_exec(["/opt/venv/bin/python", "-m", "pip", "install", "uv"])
+        )
+
     @function
     async def build_mcp_image(self) -> dagger.Container:
         raise NotImplementedError("build_mcp_image not yet implemented — see PLAN.md Phase 2")
@@ -58,34 +88,27 @@ class JoplinMcp:
             raise ValueError("verbosity must be >= 0")
 
         capped_verbosity = min(verbosity, 3)
-        verbosity_arg = f" -{'v' * capped_verbosity}" if capped_verbosity > 0 else ""
-        pytest_cmd = (
-            "python -m pytest tests/unit/test_main.py"
-            f"{verbosity_arg}"
-            " --color=yes -W default 2>&1"
-        )
+        pytest_args = ["tests/unit/test_main.py", "--color=yes", "-W", "default"]
+        if capped_verbosity > 0:
+            pytest_args.insert(0, f"-{'v' * capped_verbosity}")
+
+        container = await self._python_uv_container(source)
 
         return await (
-            self._python_container(source)
+            container
             .with_env_variable("PY_COLORS", "1")
             .with_env_variable("TERM", "xterm-256color")
             .with_exec(
                 [
-                    "python",
-                    "-m",
+                    "uv",
                     "pip",
                     "install",
-                    "--root-user-action=ignore",
+                    "--python",
+                    "python",
                     ".[unit-tests]",
                 ]
             )
-            .with_exec(
-                [
-                    "sh",
-                    "-lc",
-                    pytest_cmd,
-                ]
-            )
+            .with_exec(["pytest", *pytest_args])
             .stdout()
         )
 
