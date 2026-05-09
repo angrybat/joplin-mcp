@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: unit-tests-complete
-next_action: Begin build-mcp-image stage implementation and validate wrapper startup plus health endpoints in-container.
+current_phase: build-mcp-image-in-progress
+next_action: Complete build-mcp-image metadata/determinism validation and sync status evidence in README/PLAN.
 ---
 
 # Joplin MCP — Execution Plan
@@ -152,8 +152,8 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 ### Stage: `build-mcp-image`
 
-**Status:** ⬜ Not started
-**Started:** —
+**Status:** 🟡 In progress
+**Started:** 2026-05-09
 **Completed:** —
 
 **Purpose:** Build the Joplin MCP wrapper Docker image from pinned dependencies.
@@ -163,15 +163,14 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - `src/joplin_mcp_wrapper/` — wrapper source code
 - `pyproject.toml` — pinned `joplin-mcp` version
 - Pinned Python base image reference
-- `--platforms` pipeline argument (default: `linux/amd64,linux/arm64`)
 
 **Function Contract:**
-- `build-mcp-image(source, platforms="linux/amd64,linux/arm64") -> dagger.Container`
+- `build-mcp-image(source) -> dagger.Container`
 
 **Outputs:**
 - OCI image artifact
 - Image digest
-- OCI labels: `org.opencontainers.image.source`, `org.opencontainers.image.revision`, `org.opencontainers.image.version`
+- Runtime-ready MCP wrapper entrypoint image (OCI labels are applied in `publish-image` stage)
 
 **Depends on:** none
 

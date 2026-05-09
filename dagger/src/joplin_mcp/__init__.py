@@ -54,9 +54,54 @@ class JoplinMcp:
     async def build_mcp_image(
         self,
         source: dagger.Directory,
-        platforms: str = "linux/amd64,linux/arm64",
     ) -> dagger.Container:
-        raise NotImplementedError("build_mcp_image not yet implemented — see PLAN.md Phase 2")
+        repo = (
+            dag.directory()
+            .with_file("LICENSE", source.file("LICENSE"))
+            .with_file("README.md", source.file("README.md"))
+            .with_file("pyproject.toml", source.file("pyproject.toml"))
+            .with_directory("src", source.directory("src"))
+        )
+
+        build_container = await self._python_uv_container(repo)
+        build_container = build_container.with_exec([
+            "uv",
+            "pip",
+            "install",
+            "--python",
+            "python",
+            ".",
+        ])
+
+        # Startup smoke check: prove the wrapper command can launch in-image.
+        smoke_tested = (
+            build_container
+            .with_env_variable("JOPLIN_HOST", "http://localhost:22300")
+            .with_env_variable("JOPLIN_TOKEN", "phase2-smoke-token")
+            .with_exec(["joplin-mcp-wrapper"])
+            .with_exec(
+                [
+                    "sh",
+                    "-lc",
+                    "mkdir -p /tmp/runtime-venv && cp -a /opt/venv/. /tmp/runtime-venv/",
+                ]
+            )
+        )
+
+        return (
+            dag.container()
+            .from_("python:3.12.9-slim")
+            .with_directory("/opt/venv", smoke_tested.directory("/tmp/runtime-venv"))
+            .with_env_variable("VIRTUAL_ENV", "/opt/venv")
+            .with_env_variable(
+                "PATH",
+                "/opt/venv/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin",
+            )
+            .with_workdir("/app")
+            .with_entrypoint(["joplin-mcp-wrapper"])
+            .with_exposed_port(8000)
+            .with_exposed_port(8001)
+        )
 
     @function
     async def fixture_data(
