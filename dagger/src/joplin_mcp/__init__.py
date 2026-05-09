@@ -53,7 +53,6 @@ class JoplinMcp:
     async def unit_tests(self, source: dagger.Directory) -> str:
         return await (
             self._python_container(source)
-            .with_exec(["python", "-m", "pip", "install", "--upgrade", "pip"])
             .with_exec(
                 [
                     "python",
