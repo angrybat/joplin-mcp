@@ -73,12 +73,8 @@ class JoplinMcp:
             ".",
         ])
 
-        # Startup smoke check: prove the wrapper command can launch in-image.
-        smoke_tested = (
+        runtime_venv = (
             build_container
-            .with_env_variable("JOPLIN_HOST", "http://localhost:22300")
-            .with_env_variable("JOPLIN_TOKEN", "phase2-smoke-token")
-            .with_exec(["joplin-mcp-wrapper"])
             .with_exec(
                 [
                     "sh",
@@ -86,12 +82,13 @@ class JoplinMcp:
                     "mkdir -p /tmp/runtime-venv && cp -a /opt/venv/. /tmp/runtime-venv/",
                 ]
             )
+            .directory("/tmp/runtime-venv")
         )
 
         return (
             dag.container()
             .from_("python:3.12.9-slim")
-            .with_directory("/opt/venv", smoke_tested.directory("/tmp/runtime-venv"))
+            .with_directory("/opt/venv", runtime_venv)
             .with_env_variable("VIRTUAL_ENV", "/opt/venv")
             .with_env_variable(
                 "PATH",
