@@ -184,8 +184,8 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 ### Stage: `unit-tests`
 
-**Status:** ⬜ Not started
-**Started:** —
+**Status:** 🟡 In progress
+**Started:** 2026-05-09
 **Completed:** —
 
 **Purpose:** Run fast, deterministic unit tests for the wrapper code.
@@ -600,6 +600,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-05-09 | Completed fixture-data Phase 1 implementation by authoring the full 13-note Pirate Fleet Logbook catalog under `fixtures/definitions/` and validating parser compatibility via `read_markdown_definitions` in `src/scripts/generate_fixture_data.py` (13 definitions loaded successfully). |
 | 2026-05-09 | Completed fixture-data Phase 2 implementation by adding update-lock generation to `src/scripts/generate_fixture_data.py`, including committed lock rendering and human-readable diff output in fixture-data update mode. |
 | 2026-05-09 | Completed fixture-data Phase 4 (guardrails & handoff): fixed integration fixture guard scope in `tests/integration/conftest.py` to validate generated outputs (`seed/` + `expected/`) against committed lock checksums (not definitions); conftest guard validation passed with no lock divergence detected; updated PLAN.md and README.md with completion evidence; fixture-data stage is now complete and unblocks parallel execution of build-mcp-image and unit-tests. |
+| 2026-05-09 | Completed unit-tests Phase 2: added `unit_tests(source)` Dagger function in `dagger/src/joplin_mcp/__init__.py` that runs `tests/unit/test_main.py` in a Python 3.12 container after installing test dependencies including `pytest-asyncio`; fixed async return handling by awaiting `.stdout()`; validation evidence: `dagger call unit-tests --source=.` completed successfully with `1 passed` and no `asyncio_mode` warning in containerized output. |
 
 ---
 
@@ -609,11 +610,12 @@ _Append-only. Each entry records what changed, when, and why._
 
 **As of 2026-05-09:**
 - `fixture-data`: ✅ complete (end-to-end containerized generation with default and update-lock modes fully implemented; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed under `fixtures/definitions/`; deterministic SQL seed and expected MCP outputs generated and committed; fixture.lock baseline committed with SHA256 checksums for `fixtures/seed/seed.sql` and `fixtures/expected/notes.json`; integration fixture guard fixed and validated against committed lock with no divergence; ready to unblock parallel phases build-mcp-image and unit-tests).
+- `unit-tests`: 🟡 in progress (Phase 1 baseline test exists in `tests/unit/test_main.py`; Phase 2 is complete and validated via `dagger call unit-tests --source=.` with `1 passed`; ready for Phase 3 expansion to remaining unit tests).
 - Remaining stages: not started.
 - Documentation baseline: fixture-data Phases 1-2 contract alignment complete; Phase 3 architecture refactored to containerized script execution.
 - Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
-- Next action: validate default mode against the new lock baseline, then confirm update-lock output remains deterministic and update docs with evidence.
+- Next action: implement Phase 3 by adding remaining wrapper unit tests and broadening `unit_tests` stage target from single test to full `tests/unit` suite.
 
 ---
 

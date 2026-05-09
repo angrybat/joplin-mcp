@@ -43,6 +43,41 @@ class JoplinMcp:
         )
 
     @function
+    async def unit_tests(self, source: dagger.Directory) -> str:
+        return await (
+            dag.container()
+            .from_("python:3.12.9-slim")
+            .with_mounted_directory("/workspace", source)
+            .with_workdir("/workspace")
+            .with_exec(["python", "-m", "pip", "install", "--upgrade", "pip"])
+            .with_exec(
+                [
+                    "python",
+                    "-m",
+                    "pip",
+                    "install",
+                    "pytest>=8.0",
+                    "pytest-asyncio>=0.25",
+                    "httpx>=0.27",
+                    "dagger-io>=0.15.0",
+                ]
+            )
+            .with_exec(
+                [
+                    "python",
+                    "-m",
+                    "pytest",
+                    "tests/unit/test_main.py",
+                    "-q",
+                    "-ra",
+                    "-W",
+                    "default",
+                ]
+            )
+            .stdout()
+        )
+
+    @function
     async def postgres_service(self, postgres_version: str) -> dagger.Service:
         raise NotImplementedError("postgres_service not yet implemented — see PLAN.md Phase 3")
 
