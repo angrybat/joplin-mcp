@@ -53,9 +53,22 @@ class JoplinMcp:
         )
 
     @function
-    async def unit_tests(self, source: dagger.Directory) -> str:
+    async def unit_tests(self, source: dagger.Directory, verbosity: int = 0) -> str:
+        if verbosity < 0:
+            raise ValueError("verbosity must be >= 0")
+
+        capped_verbosity = min(verbosity, 3)
+        verbosity_arg = f" -{'v' * capped_verbosity}" if capped_verbosity > 0 else ""
+        pytest_cmd = (
+            "python -m pytest tests/unit/test_main.py"
+            f"{verbosity_arg}"
+            " --color=yes -W default 2>&1"
+        )
+
         return await (
             self._python_container(source)
+            .with_env_variable("PY_COLORS", "1")
+            .with_env_variable("TERM", "xterm-256color")
             .with_exec(
                 [
                     "python",
@@ -68,14 +81,9 @@ class JoplinMcp:
             )
             .with_exec(
                 [
-                    "python",
-                    "-m",
-                    "pytest",
-                    "tests/unit/test_main.py",
-                    "-q",
-                    "-ra",
-                    "-W",
-                    "default",
+                    "sh",
+                    "-lc",
+                    pytest_cmd,
                 ]
             )
             .stdout()
