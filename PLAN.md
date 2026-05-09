@@ -1,7 +1,7 @@
 ---
 plan_id: joplin-mcp-release-pipeline
 status: in-progress
-last_updated: 2026-04-30
+last_updated: 2026-05-09
 primary_audience:
   - humans
   - vscode_agents
@@ -13,7 +13,7 @@ release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
 current_phase: fixture-data-phase-3-default-path-in-progress
-next_action: Make fixture-data default mode pass end-to-end with source directory input, then implement update-lock path
+next_action: Debug and fix fixture-data default-mode execution (currently exits non-zero), then implement update-lock path and validate with end-to-end test
 ---
 
 # Joplin MCP — Execution Plan
@@ -596,6 +596,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-28 | Completed fixture-data Phase 2 contract alignment: added explicit default/update execution modes, lock hash scope (`seed` + `expected` only), missing-lock failure behavior, and documented lock update/export commands. |
 | 2026-04-28 | Started fixture-data Phase 3 implementation in `dagger/main.py`: default mode now generates deterministic `seed/` and `expected/` outputs and validates lock divergence against generated artifact checksums; update-lock mode remains pending. |
 | 2026-04-30 | Refactored fixture-data Phase 3 implementation to run generation and lock validation inside a Python container via `dagger/src/joplin_mcp/__init__.py` and `src/scripts/generate_fixture_data.py`, consolidating fixture logic into a single script and using repo-root directory input (`--source`). End-to-end pass evidence is still pending because `dagger call fixture-data --source=.` currently exits non-zero. |
+| 2026-05-09 | Implemented Dagger stage implementation guardrails: (1) documented Stage Implementation Pattern in AGENTS.md with flexible source directory requirement (required only when stages read repo files; optional for external-command-only stages); (2) created validation script `.github/scripts/validate-dagger-stage-pattern.py` to automatically detect forbidden patterns (`dag.host()`, parent traversal, `dag.current_module().source()`); (3) created stage scaffold template at `.github/templates/STAGE_SCAFFOLD.py` with both patterns (repo-file-reading and external-command-only); (4) added Decision Log entry documenting mandatory pattern with architectural rationale. Validation script tested and passes. |
 
 ---
 
@@ -603,12 +604,13 @@ _Append-only. Each entry records what changed, when, and why._
 
 > **Rewrite this section** each time implementation state changes.
 
-**As of 2026-04-30:**
-- `fixture-data`: in progress (containerized script-based default mode implemented with repo-root source directory input; `dagger call fixture-data --source=.` is still failing, and update-lock remains pending).
+**As of 2026-05-09:**
+- `fixture-data`: in progress (containerized script-based default mode implemented with repo-root source directory input; `dagger call fixture-data --source=.` is still failing with exit code 1, and update-lock mode remains pending).
 - Remaining stages: not started.
-- Documentation baseline: fixture-data Phases 1-2 contract alignment complete, with Phase 3 architecture refactored to containerized script execution.
+- Documentation baseline: fixture-data Phases 1-2 contract alignment complete; Phase 3 architecture refactored to containerized script execution.
+- Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
-- Next action: debug and fix fixture-data default-mode execution failure for `--source=.`, then implement update-lock and integration checksum alignment.
+- Next action: debug and fix fixture-data default-mode execution to resolve exit code 1, then implement update-lock mode and validate end-to-end; all future stages will follow established pattern and use validation script to enforce boundaries.
 
 ---
 
@@ -639,6 +641,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-28 | fixture-data runs in default and update-lock modes | Separates artifact generation from lock regeneration so lock updates are explicit and reviewable | Active |
 | 2026-04-28 | fixture.lock checksum scope is generated outputs only (`seed/**`, `expected/**`) | Prevents source definition hashing from conflicting with generated-output contract | Active |
 | 2026-04-30 | fixture-data stage accepts one repo-root source directory and executes a single consolidated script inside a Python container | Keeps module boundaries scope-safe and centralizes generation plus lock logic in `src/scripts/generate_fixture_data.py` | Active |
+| 2026-05-09 | All Dagger stages follow standardized pattern: (1) stages reading repo files accept single `source: dagger.Directory`; (2) orchestration only in module; (3) file-accessing logic in `src/scripts`; (4) no `dag.host()` or parent traversal. Stages executing only external commands (no repo file access) may omit source parameter. | Maintains module scope boundaries, ensures consistency, enables automated validation, prevents host filesystem API drift while allowing flexibility for stateless/external-only operations | Active |
 
 ---
 
