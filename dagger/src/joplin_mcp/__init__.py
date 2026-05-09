@@ -7,6 +7,15 @@ from dagger import dag, function, object_type
 @object_type
 class JoplinMcp:
 
+    def _python_container(self, source: dagger.Directory) -> dagger.Container:
+        python_version = "3.12.9-slim"
+        return (
+            dag.container()
+            .from_(f"python:{python_version}")
+            .with_mounted_directory("/workspace", source)
+            .with_workdir("/workspace")
+        )
+
     @function
     async def build_mcp_image(self) -> dagger.Container:
         raise NotImplementedError("build_mcp_image not yet implemented — see PLAN.md Phase 2")
@@ -24,9 +33,7 @@ class JoplinMcp:
         )
 
         return (
-            dag.container()
-            .from_("python:3.12.9-slim")
-            .with_mounted_directory("/workspace", repo)
+            self._python_container(repo)
             .with_exec(
                 [
                     "python",
@@ -45,10 +52,7 @@ class JoplinMcp:
     @function
     async def unit_tests(self, source: dagger.Directory) -> str:
         return await (
-            dag.container()
-            .from_("python:3.12.9-slim")
-            .with_mounted_directory("/workspace", source)
-            .with_workdir("/workspace")
+            self._python_container(source)
             .with_exec(["python", "-m", "pip", "install", "--upgrade", "pip"])
             .with_exec(
                 [
