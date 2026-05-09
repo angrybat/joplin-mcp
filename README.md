@@ -75,14 +75,14 @@ PostgreSQL
 ## Current Status
 
 > **Project state: IN PROGRESS**
-> Last updated: 2026-05-09 — fixture-data phase complete; unit-tests Phase 2 implemented and validated
+> Last updated: 2026-05-09 — fixture-data and unit-tests phases complete
 
 | Area | Status |
 |---|---|
 | Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
-| MCP wrapper | 🟡 In progress (Phase 1 baseline env validation implemented) |
-| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests Phase 2 single-test runner implemented; remaining stages are stubs |
+| MCP wrapper | 🟡 In progress (unit-test-targeted runtime and health primitives implemented) |
+| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; remaining stages are stubs |
 | Helm chart | 🟡 Skeleton only |
 | Integration tests | 🟡 Skeleton only |
 | Published image | ⬜ Not started |
@@ -96,7 +96,7 @@ PostgreSQL
 |---|---|---|
 | `fixture-data` | ✅ Complete | Containerized generation with default and update-lock modes fully implemented in `dagger/src/joplin_mcp/__init__.py` and `src/scripts/generate_fixture_data.py`; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed; fixture.lock baseline committed with SHA256 checksums for generated outputs; integration fixture guard fixed to validate `fixtures/seed/` and `fixtures/expected/` against committed lock (no divergence detected); ready to unblock build-mcp-image and unit-tests parallel execution |
 | `build-mcp-image` | ⬜ Not started | |
-| `unit-tests` | 🟡 In progress | Phase 1 added baseline test `tests/unit/test_main.py`; Phase 2 added and validated Dagger function `unit_tests(source)` in `dagger/src/joplin_mcp/__init__.py` to install pytest dependencies (including `pytest-asyncio`) and run the single test in-container (`dagger call unit-tests --source=.` => `1 passed`) |
+| `unit-tests` | ✅ Complete | Added wrapper unit coverage for env validation, command construction, supervisor state transitions, health probe responses, and readiness caching via `tests/unit/test_main.py` and `tests/unit/test_health.py`; Dagger stage now runs full `tests/unit` suite with passing evidence (`dagger call unit-tests --source .` => `6 passed`) |
 | `build-integration-runner-image` | ⬜ Not started | |
 | `build-fixture-tooling-image` | ⬜ Not started | |
 | `postgres-service` | ⬜ Not started | |
