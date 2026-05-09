@@ -59,6 +59,7 @@ class JoplinMcp:
                     "-m",
                     "pip",
                     "install",
+                    "--root-user-action=ignore",
                     ".[unit-tests]",
                 ]
             )
