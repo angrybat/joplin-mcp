@@ -5,8 +5,10 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 import time
+from typing import TYPE_CHECKING
 
-from joplin_mcp_wrapper.main import SupervisorState
+if TYPE_CHECKING:
+    from joplin_mcp_wrapper.main import SupervisorState
 
 
 @dataclass
