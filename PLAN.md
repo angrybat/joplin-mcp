@@ -258,8 +258,8 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 ### Stage: `joplin-service`
 
-**Status:** ⬜ Not started
-**Started:** —
+**Status:** 🟡 In progress
+**Started:** 2026-05-10
 **Completed:** —
 
 **Purpose:** Start a Joplin Server service container connected to Postgres, allow Joplin to create/migrate schema, then seed fixture data through the Joplin Data API.
@@ -285,6 +285,9 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - Joplin fails to start or schema upgrade fails.
 - Baseline API calls return unexpected responses.
 - Schema version mismatch with explicit diagnostic output.
+
+**Implementation Notes:**
+- Phase 1 contract implemented in `dagger/src/joplin_mcp/__init__.py`: `joplin_service(source, joplin_version, postgres_version)` now accepts repository source input required for fixture-driven API seeding.
 
 ---
 

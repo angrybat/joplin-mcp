@@ -158,7 +158,14 @@ class JoplinMcp:
         )
 
     @function
-    async def joplin_service(self, joplin_version: str, postgres_version: str) -> dagger.Service:
+    async def joplin_service(
+        self,
+        source: dagger.Directory,
+        joplin_version: str,
+        postgres_version: str,
+    ) -> dagger.Service:
+        # Phase 1 contract: stage accepts repository source for fixture-driven seeding inputs.
+        source.directory("fixtures")
         raise NotImplementedError("joplin_service not yet implemented — see PLAN.md Phase 4")
 
     @function
