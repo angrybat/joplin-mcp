@@ -75,14 +75,14 @@ PostgreSQL
 ## Current Status
 
 > **Project state: IN PROGRESS**
-> Last updated: 2026-05-10 — fixture-data, unit-tests, and build-mcp-image complete (build-stage smoke execution removed)
+> Last updated: 2026-05-10 — fixture-data, unit-tests, and build-mcp-image complete; stage catalog simplified (removed build-fixture-tooling-image)
 
 | Area | Status |
 |---|---|
 | Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | 🟡 In progress (unit-test-targeted runtime and health primitives implemented) |
-| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; build-mcp-image ✅ complete; remaining stages are stubs |
+| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; build-mcp-image ✅ complete; stage catalog simplified; remaining stages are stubs |
 | Helm chart | 🟡 Skeleton only |
 | Integration tests | 🟡 Skeleton only |
 | Published image | ⬜ Not started |
@@ -98,7 +98,6 @@ PostgreSQL
 | `build-mcp-image` | ✅ Complete | Implemented image build orchestration with source input in `dagger/src/joplin_mcp/__init__.py`, including package install and single-container runtime assembly with wrapper entrypoint and exposed service ports; OCI labels are intentionally deferred to `publish-image`; build-stage smoke execution was removed in favor of downstream integration checks; validation evidence: `dagger call build-mcp-image --source .` => success (exit code 0) |
 | `unit-tests` | ✅ Complete | Added wrapper unit coverage for env validation, command construction, supervisor state transitions, health probe responses, and readiness caching via `tests/unit/test_main.py` and `tests/unit/test_health.py`; tests were refined into focused state-specific cases; Dagger stage runs full `tests/unit` suite with passing evidence (`dagger call unit-tests --source .` => `47 passed`) |
 | `build-integration-runner-image` | ⬜ Not started | |
-| `build-fixture-tooling-image` | ⬜ Not started | |
 | `postgres-service` | ⬜ Not started | |
 | `joplin-service` | ⬜ Not started | |
 | `mcp-service` | ⬜ Not started | |

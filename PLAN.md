@@ -250,30 +250,6 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 ---
 
-### Stage: `build-fixture-tooling-image`
-
-**Status:** ⬜ Not started
-**Started:** —
-**Completed:** —
-
-**Purpose:** Build the image that generates and validates fixture data.
-
-**Inputs:**
-- Fixture tooling source in `dagger/fixtures/`
-
-**Outputs:**
-- OCI image artifact for fixture generation and lock validation
-
-**Depends on:** none
-
-**Success Criteria:**
-- Image builds and fixture generation produces expected directory structure.
-
-**Failure Criteria:**
-- Build fails or fixture tooling does not produce consistent outputs.
-
----
-
 ### Stage: `postgres-service`
 
 **Status:** ⬜ Not started
@@ -531,7 +507,6 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 INDEPENDENT STAGES (Layer 0)
 ├── fixture-data
 ├── build-mcp-image
-├── build-fixture-tooling-image
 ├── build-integration-runner-image
 └── unit-tests (src/ + tests/unit)
 
@@ -576,12 +551,12 @@ chart/ ──► chart-change-detection ──► chart-lint ──► publish-c
 
 | Mode | Trigger | Stages Required |
 |---|---|---|
-| Image release | `vX.Y.Z` git tag | fixture-data, all builds, unit-tests, all services, integration-tests, tests, pre-publish-checks, publish-image |
+| Image release | `vX.Y.Z` git tag | fixture-data, build-mcp-image, build-integration-runner-image, unit-tests, all services, integration-tests, tests, pre-publish-checks, publish-image |
 | Chart release | `chart-vX.Y.Z` git tag | chart-change-detection, chart-lint, publish-chart |
 | Full release | both tags present | both paths |
 | Unit test only | manual / PR | unit-tests |
-| Integration test only | manual / PR | fixture-data, all builds, all services, integration-tests |
-| Test gateway run | manual / PR | fixture-data, all builds, all services, tests |
+| Integration test only | manual / PR | fixture-data, build-mcp-image, build-integration-runner-image, all services, integration-tests |
+| Test gateway run | manual / PR | fixture-data, build-mcp-image, build-integration-runner-image, all services, tests |
 
 ---
 
@@ -607,6 +582,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-05-09 | Completed unit-tests Phase 3: implemented remaining wrapper unit-test coverage with new `src/joplin_mcp_wrapper/health.py` readiness/cache helpers and expanded `src/joplin_mcp_wrapper/main.py` command + supervisor state primitives; added `tests/unit/test_health.py` and expanded `tests/unit/test_main.py`; broadened Dagger unit test execution to `tests/unit`; validation evidence: local `pytest tests/unit -q` => `6 passed` and `dagger call unit-tests --source .` => `6 passed`. |
 | 2026-05-09 | Refined unit-tests for clearer state isolation: split combined assertions into focused per-state tests in `tests/unit/test_main.py` and `tests/unit/test_health.py`; validation evidence: `dagger call unit-tests --source .` => `15 passed` across full `tests/unit` suite. |
 | 2026-05-10 | Updated `build-mcp-image` implementation to remove build-stage startup smoke execution and keep runtime assembly in a single returned container chain; session validation evidence: `dagger call build-mcp-image --source .` succeeded (exit code 0) from repository root. |
+| 2026-05-10 | Simplified plan by removing the `build-fixture-tooling-image` stage and relying on existing fixture checks in `fixture-data` plus fixture-lock assertions in `integration-tests`; updated dependency graph and pipeline mode stage lists to remove stale "all builds" ambiguity. |
 
 ---
 
@@ -618,6 +594,7 @@ _Append-only. Each entry records what changed, when, and why._
 - `fixture-data`: ✅ complete (end-to-end containerized generation with default and update-lock modes fully implemented; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed under `fixtures/definitions/`; deterministic SQL seed and expected MCP outputs generated and committed; fixture.lock baseline committed with SHA256 checksums for `fixtures/seed/seed.sql` and `fixtures/expected/notes.json`; integration fixture guard fixed and validated against committed lock with no divergence; ready to unblock parallel phases build-mcp-image and unit-tests).
 - `unit-tests`: ✅ complete (Phase 1 env validation baseline plus Phase 3 coverage for command construction, supervisor state transitions, health responses, and readiness caching; suite refined into focused state tests; validation: `dagger call unit-tests --source .` passes with 47 tests).
 - `build-mcp-image`: ✅ complete (build function assembles and returns a single container after `uv pip install .`, with `joplin-mcp-wrapper` entrypoint and ports 8000/8001 exposed; build-stage startup smoke execution removed; validation: `dagger call build-mcp-image --source .` succeeded with exit code 0).
+- `build-fixture-tooling-image`: removed from the stage catalog; fixture generation and validation remain covered by `fixture-data` and `integration-tests` fixture-lock assertions.
 - Remaining stages: not started.
 - Documentation baseline: fixture-data Phases 1-2 contract alignment complete; Phase 3 architecture refactored to containerized script execution.
 - Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.
@@ -658,6 +635,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-05-09 | `build-mcp-image` defers OCI label assignment to `publish-image` stage | Keeps release metadata binding (source/revision/version) centralized at publish time, where release version and git revision are authoritative | Active |
 | 2026-05-09 | `build-mcp-image` validates runnable entrypoint startup, while health endpoint response validation is enforced in service/integration stages | Preserves stage scope boundaries: build stage verifies image assembly and launchability; live endpoint behavior requires composed services | Superseded |
 | 2026-05-10 | Build-stage startup smoke execution is removed from `build-mcp-image`; runnable behavior is validated in downstream integration/service stages | Avoids duplicating runtime checks before integration gates and keeps build stage focused on reproducible image assembly | Active |
+| 2026-05-10 | Remove `build-fixture-tooling-image` stage from the release plan | Keeps pipeline simpler while retaining fixture safety via `fixture-data` lock validation and `integration-tests` checksum assertions against committed lock baseline | Active |
 
 ---
 
