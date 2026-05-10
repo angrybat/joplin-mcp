@@ -64,31 +64,15 @@ class JoplinMcp:
         )
 
         build_container = await self._python_uv_container(repo)
-        build_container = build_container.with_exec([
-            "uv",
-            "pip",
-            "install",
-            "--python",
-            "python",
-            ".",
-        ])
-
-        runtime_venv = (
-            build_container
-            .with_exec(
-                [
-                    "sh",
-                    "-lc",
-                    "mkdir -p /tmp/runtime-venv && cp -a /opt/venv/. /tmp/runtime-venv/",
-                ]
-            )
-            .directory("/tmp/runtime-venv")
-        )
-
-        return (
-            dag.container()
-            .from_("python:3.12.9-slim")
-            .with_directory("/opt/venv", runtime_venv)
+        return ( 
+            build_container.with_exec([
+                    "uv",
+                    "pip",
+                    "install",
+                    "--python",
+                    "python",
+                    ".",
+            ])
             .with_env_variable("VIRTUAL_ENV", "/opt/venv")
             .with_env_variable(
                 "PATH",
