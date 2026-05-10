@@ -76,14 +76,14 @@ PostgreSQL
 ## Current Status
 
 > **Project state: IN PROGRESS**
-> Last updated: 2026-05-10 — joplin-service Phase 1 contract implemented (`source` + version inputs); API seeding strategy remains Joplin-startup-driven
+> Last updated: 2026-05-10 — joplin-service Phase 2 runtime startup implemented (Postgres binding + API readiness probe); API seeding remains next
 
 | Area | Status |
 |---|---|
 | Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | 🟡 In progress (unit-test-targeted runtime and health primitives implemented) |
-| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; build-mcp-image ✅ complete; postgres-service ✅ complete (vanilla startup); joplin-service Phase 1 contract ✅ (`source` + versions); integration-tests will build runner environment in-stage |
+| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; build-mcp-image ✅ complete; postgres-service ✅ complete (vanilla startup); joplin-service Phase 1+2 ✅ (contract + runtime startup/readiness); integration-tests will build runner environment in-stage |
 | Helm chart | 🟡 Skeleton only |
 | Integration tests | 🟡 Skeleton only |
 | Published image | ⬜ Not started |
@@ -99,7 +99,7 @@ PostgreSQL
 | `build-mcp-image` | ✅ Complete | Implemented image build orchestration with source input in `dagger/src/joplin_mcp/__init__.py`, including package install and single-container runtime assembly with wrapper entrypoint and exposed service ports; OCI labels are intentionally deferred to `publish-image`; build-stage smoke execution was removed in favor of downstream integration checks; validation evidence: `dagger call build-mcp-image --source .` => success (exit code 0) |
 | `unit-tests` | ✅ Complete | Added wrapper unit coverage for env validation, command construction, supervisor state transitions, health probe responses, and readiness caching via `tests/unit/test_main.py` and `tests/unit/test_health.py`; tests were refined into focused state-specific cases; Dagger stage runs full `tests/unit` suite with passing evidence (`dagger call unit-tests --source .` => `47 passed`) |
 | `postgres-service` | ✅ Complete | Stage now starts vanilla Postgres only (no fixture SQL mount), so Joplin owns schema initialization/migrations; validation evidence: `dagger call postgres-service --postgres-version=16` succeeded and returned a service object |
-| `joplin-service` | 🟡 In progress | Phase 1 implemented in `dagger/src/joplin_mcp/__init__.py`: stage now accepts `source`, `joplin_version`, and `postgres_version`; remaining work is runtime startup, readiness gating, and separate-container API seeding |
+| `joplin-service` | 🟡 In progress | Phase 1+2 implemented in `dagger/src/joplin_mcp/__init__.py`: stage accepts `source` + versions, starts Joplin bound to Postgres, and gates return on API readiness probe; remaining work is separate-container API seeding and post-seed verification |
 | `mcp-service` | ⬜ Not started | |
 | `integration-tests` | ⬜ Not started | |
 | `tests` | ⬜ Not started | |

@@ -164,9 +164,63 @@ class JoplinMcp:
         joplin_version: str,
         postgres_version: str,
     ) -> dagger.Service:
-        # Phase 1 contract: stage accepts repository source for fixture-driven seeding inputs.
         source.directory("fixtures")
-        raise NotImplementedError("joplin_service not yet implemented — see PLAN.md Phase 4")
+        postgres = await self.postgres_service(postgres_version=postgres_version)
+
+        joplin_service = (
+            dag.container()
+            .from_(f"joplin/server:{joplin_version}")
+            .with_service_binding("postgres", postgres)
+            .with_env_variable("APP_PORT", "22300")
+            .with_env_variable("APP_BASE_URL", "http://joplin:22300")
+            .with_env_variable("DB_CLIENT", "pg")
+            .with_env_variable("POSTGRES_HOST", "postgres")
+            .with_env_variable("POSTGRES_PORT", "5432")
+            .with_env_variable("POSTGRES_DATABASE", "postgres")
+            .with_env_variable("POSTGRES_USER", "postgres")
+            .with_env_variable("POSTGRES_PASSWORD", "")
+            .with_env_variable("JOPLIN_API_TOKEN", "fixture-token")
+            .with_exposed_port(22300)
+            .as_service()
+        )
+
+        await (
+            dag.container()
+            .from_("curlimages/curl:8.12.1")
+            .with_service_binding("joplin", joplin_service)
+            .with_exec(
+                [
+                    "sh",
+                    "-lc",
+                    (
+                        "set -eu; "
+                        "url='http://joplin:22300/api/ping'; "
+                        "attempts=0; "
+                        "max_attempts=45; "
+                        "last_code='000'; "
+                        "while [ \"$attempts\" -lt \"$max_attempts\" ]; do "
+                        "code=$(curl --connect-timeout 2 --max-time 3 -sS -o /tmp/joplin-body -w '%{http_code}' \"$url\" || true); "
+                        "last_code=$code; "
+                        "if [ \"$code\" != '000' ] && [ \"$code\" != '502' ] && [ \"$code\" != '503' ] && [ \"$code\" != '504' ]; then "
+                        "echo \"Joplin API reachable (HTTP $code)\"; "
+                        "exit 0; "
+                        "fi; "
+                        "attempts=$((attempts+1)); "
+                        "sleep 2; "
+                        "done; "
+                        "echo 'Timed out waiting for Joplin API readiness after 90 seconds.' >&2; "
+                        "echo \"Endpoint: $url\" >&2; "
+                        "echo \"Last HTTP status: $last_code\" >&2; "
+                        "echo 'Last response body:' >&2; "
+                        "cat /tmp/joplin-body >&2 || true; "
+                        "exit 1"
+                    ),
+                ]
+            )
+            .stdout()
+        )
+
+        return joplin_service
 
     @function
     async def mcp_service(self, joplin_version: str, postgres_version: str) -> dagger.Service:

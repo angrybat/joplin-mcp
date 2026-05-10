@@ -288,6 +288,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 **Implementation Notes:**
 - Phase 1 contract implemented in `dagger/src/joplin_mcp/__init__.py`: `joplin_service(source, joplin_version, postgres_version)` now accepts repository source input required for fixture-driven API seeding.
+- Phase 2 runtime assembly implemented in `dagger/src/joplin_mcp/__init__.py`: stage now provisions a Joplin service container bound to `postgres-service`, sets Joplin/Postgres runtime env vars, and blocks on a readiness probe (`/api/ping`) before returning the running service.
 
 ---
 
