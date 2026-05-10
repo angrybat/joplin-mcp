@@ -50,6 +50,22 @@ class JoplinMcp:
             .with_exec(["/opt/venv/bin/python", "-m", "pip", "install", "uv"])
         )
 
+    async def _python_test_container(self, source: dagger.Directory) -> dagger.Container:
+        container = await self._python_uv_container(source)
+        return (
+            container
+            .with_exec(
+                [
+                    "uv",
+                    "pip",
+                    "install",
+                    "--python",
+                    "python",
+                    ".[tests]",
+                ]
+            )
+        )
+
     @function
     async def build_mcp_image(
         self,
@@ -123,22 +139,12 @@ class JoplinMcp:
         if capped_verbosity > 0:
             pytest_args.insert(0, f"-{'v' * capped_verbosity}")
 
-        container = await self._python_uv_container(source)
+        container = await self._python_test_container(source)
 
         return await (
             container
             .with_env_variable("PY_COLORS", "1")
             .with_env_variable("TERM", "xterm-256color")
-            .with_exec(
-                [
-                    "uv",
-                    "pip",
-                    "install",
-                    "--python",
-                    "python",
-                    ".[unit-tests]",
-                ]
-            )
             .with_exec(["pytest", *pytest_args])
             .stdout()
         )
@@ -166,6 +172,9 @@ class JoplinMcp:
     ) -> dagger.Service:
         repo = (
             dag.directory()
+            .with_file("LICENSE", source.file("LICENSE"))
+            .with_file("README.md", source.file("README.md"))
+            .with_file("pyproject.toml", source.file("pyproject.toml"))
             .with_directory("fixtures", source.directory("fixtures"))
             .with_directory("src", source.directory("src"))
             .with_directory("tests", source.directory("tests"))
@@ -210,14 +219,13 @@ class JoplinMcp:
         )
 
         await (
-            self._python_container(repo)
+            (await self._python_test_container(repo))
             .with_env_variable("PYTHONUNBUFFERED", "1")
             .with_service_binding("joplin", joplin_service)
             .with_env_variable("JOPLIN_BASE_URL", "http://joplin:22300")
             .with_env_variable("JOPLIN_ADMIN_EMAIL", "admin@localhost")
             .with_env_variable("JOPLIN_ADMIN_PASSWORD", "admin")
             .with_env_variable("FIXTURES_ROOT", "/workspace/fixtures")
-            .with_exec(["python", "-m", "pip", "install", "pytest"])
             .with_exec(["pytest", "tests/seed", "-q", "--color=yes"])
             .stdout()
         )
