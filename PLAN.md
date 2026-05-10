@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: api-seeding-contract-update
-next_action: Rework postgres-service to start vanilla Postgres only, then implement joplin-service API seeding from fixture definitions.
+current_phase: postgres-service-rework-complete
+next_action: Implement joplin-service startup plus API seeding from fixture definitions.
 ---
 
 # Joplin MCP — Execution Plan
@@ -226,9 +226,9 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 ### Stage: `postgres-service`
 
-**Status:** 🟡 In progress
+**Status:** ✅ Complete
 **Started:** 2026-05-10
-**Completed:** —
+**Completed:** 2026-05-10
 
 **Purpose:** Start a Postgres service container for Joplin to initialize and migrate.
 
@@ -252,7 +252,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - Service endpoint is unreachable from downstream stages.
 
 **Implementation Notes:**
-- Current implementation still mounts fixture SQL at startup; this is transitional and must be removed to align with the API-seeding contract.
+- Stage starts a vanilla Postgres service only (no fixture SQL mount), so Joplin owns schema creation and migrations.
 
 ---
 
@@ -568,6 +568,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-05-10 | Simplified plan by removing `build-integration-runner-image` and folding integration test runner environment build into `integration-tests`; updated dependencies, stage graph, pipeline modes, and next-action references accordingly. |
 | 2026-05-10 | Implemented `postgres-service` in `dagger/src/joplin_mcp/__init__.py` as a seeded Postgres 16 service that reuses `fixture-data` output from the repository source, mounts `seed.sql` into the init directory, and exposes port 5432; validation evidence: `dagger call postgres-service --source . --postgres-version=16` succeeded. |
 | 2026-05-10 | Reconciled plan to switch fixture seeding strategy from direct SQL schema/data writes to Joplin Data API seeding after Joplin startup, so Joplin owns schema creation and migrations. Marked `postgres-service` as in-progress for rework and moved seeding responsibility to `joplin-service`. |
+| 2026-05-10 | Completed `postgres-service` rework to match API-seeding plan: removed source/fixture wiring and SQL init mount so the stage now starts vanilla Postgres only; validation evidence: `dagger call postgres-service --postgres-version=16` succeeded and returned a service object. |
 
 ---
 
@@ -579,7 +580,7 @@ _Append-only. Each entry records what changed, when, and why._
 - `fixture-data`: ✅ complete (end-to-end containerized generation with default and update-lock modes fully implemented; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed under `fixtures/definitions/`; deterministic SQL seed and expected MCP outputs generated and committed; fixture.lock baseline committed with SHA256 checksums for `fixtures/seed/seed.sql` and `fixtures/expected/notes.json`; integration fixture guard fixed and validated against committed lock with no divergence; ready to unblock parallel phases build-mcp-image and unit-tests).
 - `unit-tests`: ✅ complete (Phase 1 env validation baseline plus Phase 3 coverage for command construction, supervisor state transitions, health responses, and readiness caching; suite refined into focused state tests; validation: `dagger call unit-tests --source .` passes with 47 tests).
 - `build-mcp-image`: ✅ complete (build function assembles and returns a single container after `uv pip install .`, with `joplin-mcp-wrapper` entrypoint and ports 8000/8001 exposed; build-stage startup smoke execution removed; validation: `dagger call build-mcp-image --source .` succeeded with exit code 0).
-- `postgres-service`: 🟡 in progress (current implementation starts Postgres and mounts fixture SQL seed output, but this behavior is now transitional because seeding must move to the Joplin API path after Joplin schema initialization).
+- `postgres-service`: ✅ complete (stage now starts vanilla Postgres only with no fixture SQL mount; validation: `dagger call postgres-service --postgres-version=16` succeeds and returns a service object).
 - `joplin-service`: ⬜ not started (updated contract now includes API-based fixture seeding after Joplin startup/migrations complete).
 - `build-fixture-tooling-image`: removed from the stage catalog; fixture generation and validation remain covered by `fixture-data` and `integration-tests` fixture-lock assertions.
 - `build-integration-runner-image`: removed from the stage catalog; integration test runner environment build is now expected to occur inside `integration-tests`.
@@ -588,7 +589,7 @@ _Append-only. Each entry records what changed, when, and why._
 - Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
 - Follow-up risk: final runtime image assembly pattern remains under review because current single-container return depends on cache-mounted `/opt/venv` behavior; keep this documented before moving to downstream image consumers.
-- Next action: rework `postgres-service` to remove SQL seeding and implement `joplin-service` API seeding from fixture definitions before proceeding to `mcp-service` and `integration-tests`.
+- Next action: implement `joplin-service` startup and API seeding from fixture definitions before proceeding to `mcp-service` and `integration-tests`.
 
 ---
 
