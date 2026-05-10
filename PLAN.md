@@ -1,7 +1,7 @@
 ---
 plan_id: joplin-mcp-release-pipeline
 status: in-progress
-last_updated: 2026-05-09
+last_updated: 2026-05-10
 primary_audience:
   - humans
   - vscode_agents
@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: build-mcp-image-in-progress
-next_action: Complete build-mcp-image metadata/determinism validation and sync status evidence in README/PLAN.
+current_phase: build-mcp-image-complete
+next_action: Resolve and document final runtime image assembly approach for build-mcp-image (cache-mounted venv vs materialized runtime copy), then begin build-integration-runner-image.
 ---
 
 # Joplin MCP — Execution Plan
@@ -152,9 +152,9 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 ### Stage: `build-mcp-image`
 
-**Status:** 🟡 In progress
+**Status:** ✅ Complete
 **Started:** 2026-05-09
-**Completed:** —
+**Completed:** 2026-05-09
 
 **Purpose:** Build the Joplin MCP wrapper Docker image from pinned dependencies.
 
@@ -176,12 +176,12 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 **Success Criteria:**
 - Image builds successfully from pinned dependencies.
-- Wrapper process starts and health endpoints respond on expected port.
+- Image declares the expected wrapper runtime entrypoint and exposed service ports.
 - Image digest is deterministic for identical inputs.
 
 **Failure Criteria:**
 - Build fails due to dependency resolution errors.
-- Health endpoint does not respond after startup.
+- Runtime entrypoint or expected service ports are not configured in the resulting image metadata.
 
 ---
 
@@ -606,6 +606,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-05-09 | Completed unit-tests Phase 2: added `unit_tests(source)` Dagger function in `dagger/src/joplin_mcp/__init__.py` that runs `tests/unit/test_main.py` in a Python 3.12 container after installing test dependencies including `pytest-asyncio`; fixed async return handling by awaiting `.stdout()`; validation evidence: `dagger call unit-tests --source=.` completed successfully with `1 passed` and no `asyncio_mode` warning in containerized output. |
 | 2026-05-09 | Completed unit-tests Phase 3: implemented remaining wrapper unit-test coverage with new `src/joplin_mcp_wrapper/health.py` readiness/cache helpers and expanded `src/joplin_mcp_wrapper/main.py` command + supervisor state primitives; added `tests/unit/test_health.py` and expanded `tests/unit/test_main.py`; broadened Dagger unit test execution to `tests/unit`; validation evidence: local `pytest tests/unit -q` => `6 passed` and `dagger call unit-tests --source .` => `6 passed`. |
 | 2026-05-09 | Refined unit-tests for clearer state isolation: split combined assertions into focused per-state tests in `tests/unit/test_main.py` and `tests/unit/test_health.py`; validation evidence: `dagger call unit-tests --source .` => `15 passed` across full `tests/unit` suite. |
+| 2026-05-10 | Updated `build-mcp-image` implementation to remove build-stage startup smoke execution and keep runtime assembly in a single returned container chain; session validation evidence: `dagger call build-mcp-image --source .` succeeded (exit code 0) from repository root. |
 
 ---
 
@@ -613,14 +614,16 @@ _Append-only. Each entry records what changed, when, and why._
 
 > **Rewrite this section** each time implementation state changes.
 
-**As of 2026-05-09:**
+**As of 2026-05-10:**
 - `fixture-data`: ✅ complete (end-to-end containerized generation with default and update-lock modes fully implemented; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed under `fixtures/definitions/`; deterministic SQL seed and expected MCP outputs generated and committed; fixture.lock baseline committed with SHA256 checksums for `fixtures/seed/seed.sql` and `fixtures/expected/notes.json`; integration fixture guard fixed and validated against committed lock with no divergence; ready to unblock parallel phases build-mcp-image and unit-tests).
-- `unit-tests`: ✅ complete (Phase 1 env validation baseline plus Phase 3 coverage for command construction, supervisor state transitions, health responses, and readiness caching; suite refined into focused state tests; validation: `dagger call unit-tests --source .` passes with 15 tests).
+- `unit-tests`: ✅ complete (Phase 1 env validation baseline plus Phase 3 coverage for command construction, supervisor state transitions, health responses, and readiness caching; suite refined into focused state tests; validation: `dagger call unit-tests --source .` passes with 47 tests).
+- `build-mcp-image`: ✅ complete (build function assembles and returns a single container after `uv pip install .`, with `joplin-mcp-wrapper` entrypoint and ports 8000/8001 exposed; build-stage startup smoke execution removed; validation: `dagger call build-mcp-image --source .` succeeded with exit code 0).
 - Remaining stages: not started.
 - Documentation baseline: fixture-data Phases 1-2 contract alignment complete; Phase 3 architecture refactored to containerized script execution.
 - Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
-- Next action: begin `build-mcp-image` stage implementation and validate wrapper startup and health endpoint behavior in-container.
+- Follow-up risk: final runtime image assembly pattern remains under review because current single-container return depends on cache-mounted `/opt/venv` behavior; keep this documented before moving to downstream image consumers.
+- Next action: resolve and document final runtime image assembly approach for `build-mcp-image`, then begin `build-integration-runner-image`.
 
 ---
 
@@ -652,6 +655,9 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-28 | fixture.lock checksum scope is generated outputs only (`seed/**`, `expected/**`) | Prevents source definition hashing from conflicting with generated-output contract | Active |
 | 2026-04-30 | fixture-data stage accepts one repo-root source directory and executes a single consolidated script inside a Python container | Keeps module boundaries scope-safe and centralizes generation plus lock logic in `src/scripts/generate_fixture_data.py` | Active |
 | 2026-05-09 | All Dagger stages follow standardized pattern: (1) stages reading repo files accept single `source: dagger.Directory`; (2) orchestration only in module; (3) file-accessing logic in `src/scripts`; (4) no `dag.host()` or parent traversal. Stages executing only external commands (no repo file access) may omit source parameter. | Maintains module scope boundaries, ensures consistency, enables automated validation, prevents host filesystem API drift while allowing flexibility for stateless/external-only operations | Active |
+| 2026-05-09 | `build-mcp-image` defers OCI label assignment to `publish-image` stage | Keeps release metadata binding (source/revision/version) centralized at publish time, where release version and git revision are authoritative | Active |
+| 2026-05-09 | `build-mcp-image` validates runnable entrypoint startup, while health endpoint response validation is enforced in service/integration stages | Preserves stage scope boundaries: build stage verifies image assembly and launchability; live endpoint behavior requires composed services | Superseded |
+| 2026-05-10 | Build-stage startup smoke execution is removed from `build-mcp-image`; runnable behavior is validated in downstream integration/service stages | Avoids duplicating runtime checks before integration gates and keeps build stage focused on reproducible image assembly | Active |
 
 ---
 

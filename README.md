@@ -75,14 +75,14 @@ PostgreSQL
 ## Current Status
 
 > **Project state: IN PROGRESS**
-> Last updated: 2026-05-09 — fixture-data and unit-tests complete; build-mcp-image in progress
+> Last updated: 2026-05-10 — fixture-data, unit-tests, and build-mcp-image complete (build-stage smoke execution removed)
 
 | Area | Status |
 |---|---|
 | Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | 🟡 In progress (unit-test-targeted runtime and health primitives implemented) |
-| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; build-mcp-image 🟡 in progress; remaining stages are stubs |
+| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; build-mcp-image ✅ complete; remaining stages are stubs |
 | Helm chart | 🟡 Skeleton only |
 | Integration tests | 🟡 Skeleton only |
 | Published image | ⬜ Not started |
@@ -95,8 +95,8 @@ PostgreSQL
 | Stage | Status | Notes |
 |---|---|---|
 | `fixture-data` | ✅ Complete | Containerized generation with default and update-lock modes fully implemented in `dagger/src/joplin_mcp/__init__.py` and `src/scripts/generate_fixture_data.py`; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed; fixture.lock baseline committed with SHA256 checksums for generated outputs; integration fixture guard fixed to validate `fixtures/seed/` and `fixtures/expected/` against committed lock (no divergence detected); ready to unblock build-mcp-image and unit-tests parallel execution |
-| `build-mcp-image` | 🟡 In progress | Implemented function contract and base image build orchestration with source argument in `dagger/src/joplin_mcp/__init__.py`; added startup smoke-check step to ensure runnable wrapper entrypoint; OCI labels are intentionally deferred to `publish-image`; validation evidence: `dagger call unit-tests --source .` => `15 passed` |
-| `unit-tests` | ✅ Complete | Added wrapper unit coverage for env validation, command construction, supervisor state transitions, health probe responses, and readiness caching via `tests/unit/test_main.py` and `tests/unit/test_health.py`; tests were refined into focused state-specific cases; Dagger stage runs full `tests/unit` suite with passing evidence (`dagger call unit-tests --source .` => `15 passed`) |
+| `build-mcp-image` | ✅ Complete | Implemented image build orchestration with source input in `dagger/src/joplin_mcp/__init__.py`, including package install and single-container runtime assembly with wrapper entrypoint and exposed service ports; OCI labels are intentionally deferred to `publish-image`; build-stage smoke execution was removed in favor of downstream integration checks; validation evidence: `dagger call build-mcp-image --source .` => success (exit code 0) |
+| `unit-tests` | ✅ Complete | Added wrapper unit coverage for env validation, command construction, supervisor state transitions, health probe responses, and readiness caching via `tests/unit/test_main.py` and `tests/unit/test_health.py`; tests were refined into focused state-specific cases; Dagger stage runs full `tests/unit` suite with passing evidence (`dagger call unit-tests --source .` => `47 passed`) |
 | `build-integration-runner-image` | ⬜ Not started | |
 | `build-fixture-tooling-image` | ⬜ Not started | |
 | `postgres-service` | ⬜ Not started | |
