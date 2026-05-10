@@ -54,6 +54,7 @@ PostgreSQL
 - Upstream `joplin-mcp` is not modified; it runs as a supervised child process.
 - Health endpoints are provided by the wrapper, keeping them independent of the MCP transport.
 - Joplin and Postgres versions are explicit inputs to the pipeline so compatibility is always tested against a known matrix.
+- Fixture seeding occurs in `joplin-service` through the Joplin Data API after Joplin startup/migrations; `postgres-service` is database startup only.
 - All write operations are controlled by environment-variable policy flags; delete operations are disabled by default.
 - Fixture definitions are authored as Markdown notebook trees and transformed deterministically into seed + expected artifacts.
 - `fixtures/fixture.lock` is committed as the reviewed checksum baseline for generated fixture outputs.
@@ -75,14 +76,14 @@ PostgreSQL
 ## Current Status
 
 > **Project state: IN PROGRESS**
-> Last updated: 2026-05-10 — fixture-data, unit-tests, and build-mcp-image complete; stage catalog simplified (removed build-fixture-tooling-image)
+> Last updated: 2026-05-10 — seeding strategy updated to Joplin API-based loading after Joplin startup; postgres-service marked in-progress for rework
 
 | Area | Status |
 |---|---|
 | Documentation | ✅ Complete (catalog plus slash-invocable Plan Progress Sync skill, fixture-data Phase 1 contract) |
 | Project scaffold | ✅ Complete |
 | MCP wrapper | 🟡 In progress (unit-test-targeted runtime and health primitives implemented) |
-| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; build-mcp-image ✅ complete; stage catalog simplified; remaining stages are stubs |
+| Dagger pipeline | 🟡 fixture-data ✅ complete; unit-tests ✅ complete; build-mcp-image ✅ complete; postgres-service 🟡 in-progress (rework); joplin-service contract updated for API seeding; integration-tests will build runner environment in-stage |
 | Helm chart | 🟡 Skeleton only |
 | Integration tests | 🟡 Skeleton only |
 | Published image | ⬜ Not started |
@@ -97,9 +98,8 @@ PostgreSQL
 | `fixture-data` | ✅ Complete | Containerized generation with default and update-lock modes fully implemented in `dagger/src/joplin_mcp/__init__.py` and `src/scripts/generate_fixture_data.py`; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed; fixture.lock baseline committed with SHA256 checksums for generated outputs; integration fixture guard fixed to validate `fixtures/seed/` and `fixtures/expected/` against committed lock (no divergence detected); ready to unblock build-mcp-image and unit-tests parallel execution |
 | `build-mcp-image` | ✅ Complete | Implemented image build orchestration with source input in `dagger/src/joplin_mcp/__init__.py`, including package install and single-container runtime assembly with wrapper entrypoint and exposed service ports; OCI labels are intentionally deferred to `publish-image`; build-stage smoke execution was removed in favor of downstream integration checks; validation evidence: `dagger call build-mcp-image --source .` => success (exit code 0) |
 | `unit-tests` | ✅ Complete | Added wrapper unit coverage for env validation, command construction, supervisor state transitions, health probe responses, and readiness caching via `tests/unit/test_main.py` and `tests/unit/test_health.py`; tests were refined into focused state-specific cases; Dagger stage runs full `tests/unit` suite with passing evidence (`dagger call unit-tests --source .` => `47 passed`) |
-| `build-integration-runner-image` | ⬜ Not started | |
-| `postgres-service` | ⬜ Not started | |
-| `joplin-service` | ⬜ Not started | |
+| `postgres-service` | 🟡 In progress | Current implementation starts Postgres and mounts fixture SQL seed output, but this behavior is transitional; stage contract now targets vanilla Postgres startup only so Joplin can own schema initialization/migrations |
+| `joplin-service` | ⬜ Not started | Contract updated: after Joplin startup and schema migrations, seed fixture notebooks/notes through the Joplin Data API |
 | `mcp-service` | ⬜ Not started | |
 | `integration-tests` | ⬜ Not started | |
 | `tests` | ⬜ Not started | |

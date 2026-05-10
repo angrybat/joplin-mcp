@@ -12,7 +12,7 @@ This repository builds and publishes a hosted Joplin MCP server using a Python w
 - Do not add or rely on a Dockerfile for image builds.
 - Do not skip publish gates: `integration-tests` and `pre-publish-checks` must pass before `publish-image`.
 - Treat fixture lock as authoritative: do not hand-edit [fixtures/fixture.lock](fixtures/fixture.lock).
-- Postgres seeding is the only seeding path; do not implement API-level fallback seeding.
+- Joplin API seeding is the canonical seeding path after Joplin startup/migrations; seed in `joplin-service`, not `postgres-service`.
 
 ## Build/Test Commands
 Run from repository root:

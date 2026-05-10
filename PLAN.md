@@ -12,8 +12,8 @@ version_inputs:
 release_modes:
   - image                    # triggered by vX.Y.Z git tag
   - chart                    # triggered by chart-vX.Y.Z git tag
-current_phase: build-mcp-image-complete
-next_action: Resolve and document final runtime image assembly approach for build-mcp-image (cache-mounted venv vs materialized runtime copy), then begin build-integration-runner-image.
+current_phase: api-seeding-contract-update
+next_action: Rework postgres-service to start vanilla Postgres only, then implement joplin-service API seeding from fixture definitions.
 ---
 
 # Joplin MCP — Execution Plan
@@ -43,7 +43,7 @@ next_action: Resolve and document final runtime image assembly approach for buil
 | Term | Meaning |
 |---|---|
 | **Dagger stage** | An isolated unit of pipeline work implemented as a Dagger function |
-| **Fixture** | Deterministic mock data used for both Postgres seeding and integration assertions |
+| **Fixture** | Deterministic mock data used for Joplin seeding and integration assertions |
 | **Fixture lock** | Committed checksum manifest for generated fixture artifacts used as a reviewed baseline |
 | **Fixture drift** | When expected outputs change silently without explicit review |
 | **Policy flag** | Environment variable that enables or disables a Joplin write capability |
@@ -100,6 +100,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - Fixture lock divergence **always fails** unless `--update-lock` mode is explicitly set.
 - Fixture lock checksum scope includes only generated artifacts in `fixtures/seed/**` and `fixtures/expected/**`.
 - `fixtures/definitions/**` files are canonical inputs but are excluded from fixture lock hashing.
+- Fixture seeding happens in `joplin-service` through the Joplin Data API after Joplin startup/migrations; `postgres-service` only provides the database service.
 - Delete operations on Joplin data are **disabled by default** in all policy configurations.
 
 ---
@@ -112,14 +113,14 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Started:** 2026-04-28
 **Completed:** 2026-05-09
 
-**Purpose:** Generate the single source of truth for all integration test data. Produces both the Postgres seed inputs and the expected MCP response files used for assertions.
+**Purpose:** Generate the single source of truth for all integration test data. Produces seeding artifacts and expected MCP response files used for assertions.
 
 **Inputs:**
 - Canonical Markdown fixture definitions in `fixtures/definitions/` (folder hierarchy maps to notebooks)
 - Deterministic fixture metadata from Markdown frontmatter (stable IDs, tags, policy flags)
 
 **Outputs:**
-- `fixtures/seed/` — Deterministic SQL seed files for Postgres population
+- `fixtures/seed/` — Deterministic seeding artifacts consumed by service-stage data loading (currently SQL; migrating to API-seeder payload contract)
 - `fixtures/expected/` — Expected MCP tool response files
 - `fixtures/fixture.lock` — Committed checksum manifest over generated fixture outputs (`seed/` + `expected/`) (written only in `--update-lock` mode)
 - `fixtures/fixture-diff.md` — Human-readable diff report (written only in `--update-lock` mode)
@@ -223,58 +224,35 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 ---
 
-### Stage: `build-integration-runner-image`
-
-**Status:** ⬜ Not started
-**Started:** —
-**Completed:** —
-
-**Purpose:** Build the image used to execute integration tests.
-
-**Inputs:**
-- `tests/integration/` — test suite
-- Test dependency definitions
-
-**Outputs:**
-- OCI image artifact with test tooling installed
-- Supports fixture directory bind mount at `/fixtures`
-
-**Depends on:** none
-
-**Success Criteria:**
-- Image builds successfully.
-- Test runner executes without errors against a mock target.
-
-**Failure Criteria:**
-- Build fails or test runner cannot be invoked.
-
----
-
 ### Stage: `postgres-service`
 
-**Status:** ⬜ Not started
-**Started:** —
+**Status:** 🟡 In progress
+**Started:** 2026-05-10
 **Completed:** —
 
-**Purpose:** Start a Postgres service container and seed it with fixture data.
+**Purpose:** Start a Postgres service container for Joplin to initialize and migrate.
 
 **Inputs:**
 - `--postgres-version` pipeline argument
-- `fixtures/seed/` directory from `fixture-data` stage
+
+**Function Contract:**
+- `postgres_service(postgres_version) -> dagger.Service`
 
 **Outputs:**
 - Running Postgres service endpoint for downstream stages
 
-**Depends on:** `fixture-data`
+**Depends on:** none
 
 **Success Criteria:**
 - Postgres starts on selected version.
-- All seed inputs are applied without errors.
-- Schema and row counts match expected values.
+- Service endpoint is reachable for Joplin startup and migrations.
 
 **Failure Criteria:**
 - Postgres fails to start.
-- Seed application fails or produces unexpected schema.
+- Service endpoint is unreachable from downstream stages.
+
+**Implementation Notes:**
+- Current implementation still mounts fixture SQL at startup; this is transitional and must be removed to align with the API-seeding contract.
 
 ---
 
@@ -284,21 +262,24 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Started:** —
 **Completed:** —
 
-**Purpose:** Start a Joplin Server service container connected to seeded Postgres.
+**Purpose:** Start a Joplin Server service container connected to Postgres, allow Joplin to create/migrate schema, then seed fixture data through the Joplin Data API.
 
 **Inputs:**
+- `--source` pipeline argument (repository root; used to load fixture definitions)
 - `--joplin-version` pipeline argument
 - Running Postgres service from `postgres-service` stage
+- Fixture definitions and/or generated seeding artifacts from `fixture-data`
 
 **Outputs:**
 - Running Joplin service endpoint and API token for downstream stages
+- Seeded notebooks and notes available via Joplin API
 
-**Depends on:** `postgres-service`
+**Depends on:** `postgres-service`, `fixture-data`
 
 **Success Criteria:**
 - Joplin starts on selected version and completes schema creation or upgrade.
 - Joplin Data API responds to baseline read requests.
-- Seeded data is accessible through Joplin API.
+- Fixture-defined notebooks/notes are created through API seeding and are accessible through Joplin API.
 
 **Failure Criteria:**
 - Joplin fails to start or schema upgrade fails.
@@ -348,12 +329,13 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - Running MCP service from `mcp-service`
 - `fixtures/` directory mounted read-only at `/fixtures`
 - `fixtures/fixture.lock` committed baseline for checksum validation of generated outputs
+- `tests/integration/` suite and integration test dependency definitions used to build the test runner environment inside this stage
 
 **Outputs:**
 - Test result report
 - Pass/fail exit code
 
-**Depends on:** `mcp-service`, `build-integration-runner-image`, `fixture-data`
+**Depends on:** `mcp-service`, `fixture-data`
 
 **Blocking gate for:** `tests`
 
@@ -367,6 +349,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 **Success Criteria:**
 - All assertions pass.
+- Integration test runner environment builds and launches successfully inside this stage.
 - Fixture lock checksums match generated fixture outputs.
 ---
 
@@ -507,17 +490,17 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 INDEPENDENT STAGES (Layer 0)
 ├── fixture-data
 ├── build-mcp-image
-├── build-integration-runner-image
 └── unit-tests (src/ + tests/unit)
 
 
 LEVEL 1: DIRECT DEPENDENCIES
-├── postgres-service         ◄─── fixture-data
+├── postgres-service
 └── pre-publish-checks       ◄─── build-mcp-image
 
 
 LEVEL 2: POSTGRES DEPENDENT
 └── joplin-service           ◄─── postgres-service
+                                  fixture-data
 
 
 LEVEL 3: JOPLIN + BUILD DEPENDENT
@@ -525,9 +508,8 @@ LEVEL 3: JOPLIN + BUILD DEPENDENT
                                   joplin-service
 
 
-LEVEL 4: SERVICE + BUILD + FIXTURE DEPENDENT
+LEVEL 4: SERVICE + FIXTURE DEPENDENT
 └── integration-tests        ◄─── mcp-service
-                                  build-integration-runner-image
                                   fixture-data
 
 
@@ -551,12 +533,12 @@ chart/ ──► chart-change-detection ──► chart-lint ──► publish-c
 
 | Mode | Trigger | Stages Required |
 |---|---|---|
-| Image release | `vX.Y.Z` git tag | fixture-data, build-mcp-image, build-integration-runner-image, unit-tests, all services, integration-tests, tests, pre-publish-checks, publish-image |
+| Image release | `vX.Y.Z` git tag | fixture-data, build-mcp-image, unit-tests, all services, integration-tests, tests, pre-publish-checks, publish-image |
 | Chart release | `chart-vX.Y.Z` git tag | chart-change-detection, chart-lint, publish-chart |
 | Full release | both tags present | both paths |
 | Unit test only | manual / PR | unit-tests |
-| Integration test only | manual / PR | fixture-data, build-mcp-image, build-integration-runner-image, all services, integration-tests |
-| Test gateway run | manual / PR | fixture-data, build-mcp-image, build-integration-runner-image, all services, tests |
+| Integration test only | manual / PR | fixture-data, build-mcp-image, all services, integration-tests |
+| Test gateway run | manual / PR | fixture-data, build-mcp-image, all services, tests |
 
 ---
 
@@ -583,6 +565,9 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-05-09 | Refined unit-tests for clearer state isolation: split combined assertions into focused per-state tests in `tests/unit/test_main.py` and `tests/unit/test_health.py`; validation evidence: `dagger call unit-tests --source .` => `15 passed` across full `tests/unit` suite. |
 | 2026-05-10 | Updated `build-mcp-image` implementation to remove build-stage startup smoke execution and keep runtime assembly in a single returned container chain; session validation evidence: `dagger call build-mcp-image --source .` succeeded (exit code 0) from repository root. |
 | 2026-05-10 | Simplified plan by removing the `build-fixture-tooling-image` stage and relying on existing fixture checks in `fixture-data` plus fixture-lock assertions in `integration-tests`; updated dependency graph and pipeline mode stage lists to remove stale "all builds" ambiguity. |
+| 2026-05-10 | Simplified plan by removing `build-integration-runner-image` and folding integration test runner environment build into `integration-tests`; updated dependencies, stage graph, pipeline modes, and next-action references accordingly. |
+| 2026-05-10 | Implemented `postgres-service` in `dagger/src/joplin_mcp/__init__.py` as a seeded Postgres 16 service that reuses `fixture-data` output from the repository source, mounts `seed.sql` into the init directory, and exposes port 5432; validation evidence: `dagger call postgres-service --source . --postgres-version=16` succeeded. |
+| 2026-05-10 | Reconciled plan to switch fixture seeding strategy from direct SQL schema/data writes to Joplin Data API seeding after Joplin startup, so Joplin owns schema creation and migrations. Marked `postgres-service` as in-progress for rework and moved seeding responsibility to `joplin-service`. |
 
 ---
 
@@ -594,13 +579,16 @@ _Append-only. Each entry records what changed, when, and why._
 - `fixture-data`: ✅ complete (end-to-end containerized generation with default and update-lock modes fully implemented; all 13 canonical Pirate Fleet Logbook fixture definitions authored and committed under `fixtures/definitions/`; deterministic SQL seed and expected MCP outputs generated and committed; fixture.lock baseline committed with SHA256 checksums for `fixtures/seed/seed.sql` and `fixtures/expected/notes.json`; integration fixture guard fixed and validated against committed lock with no divergence; ready to unblock parallel phases build-mcp-image and unit-tests).
 - `unit-tests`: ✅ complete (Phase 1 env validation baseline plus Phase 3 coverage for command construction, supervisor state transitions, health responses, and readiness caching; suite refined into focused state tests; validation: `dagger call unit-tests --source .` passes with 47 tests).
 - `build-mcp-image`: ✅ complete (build function assembles and returns a single container after `uv pip install .`, with `joplin-mcp-wrapper` entrypoint and ports 8000/8001 exposed; build-stage startup smoke execution removed; validation: `dagger call build-mcp-image --source .` succeeded with exit code 0).
+- `postgres-service`: 🟡 in progress (current implementation starts Postgres and mounts fixture SQL seed output, but this behavior is now transitional because seeding must move to the Joplin API path after Joplin schema initialization).
+- `joplin-service`: ⬜ not started (updated contract now includes API-based fixture seeding after Joplin startup/migrations complete).
 - `build-fixture-tooling-image`: removed from the stage catalog; fixture generation and validation remain covered by `fixture-data` and `integration-tests` fixture-lock assertions.
-- Remaining stages: not started.
+- `build-integration-runner-image`: removed from the stage catalog; integration test runner environment build is now expected to occur inside `integration-tests`.
+- Remaining stages: not started (mcp-service, integration-tests, tests, pre-publish-checks, publish-image, publish-chart).
 - Documentation baseline: fixture-data Phases 1-2 contract alignment complete; Phase 3 architecture refactored to containerized script execution.
 - Guardrails system: Stage Implementation Pattern documented in AGENTS.md; validation script implemented and passing; scaffold template created for future stages.
 - Repository licensing: MPL-2.0 documented via root LICENSE and package/docs references.
 - Follow-up risk: final runtime image assembly pattern remains under review because current single-container return depends on cache-mounted `/opt/venv` behavior; keep this documented before moving to downstream image consumers.
-- Next action: resolve and document final runtime image assembly approach for `build-mcp-image`, then begin `build-integration-runner-image`.
+- Next action: rework `postgres-service` to remove SQL seeding and implement `joplin-service` API seeding from fixture definitions before proceeding to `mcp-service` and `integration-tests`.
 
 ---
 
@@ -619,7 +607,9 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-18 | pre-publish-checks stage before publish-image | Supply chain integrity enforced before every public release | Active |
 | 2026-04-18 | Combined publish-all stage removed | Partial release risk outweighed benefits; image and chart publish independently | Active |
 | 2026-04-18 | Multi-arch image from the start | publish-image produces linux/amd64 + linux/arm64; build-mcp-image accepts `--platforms` argument | Active |
-| 2026-04-18 | No API-level Joplin seeding | Postgres seeding is the only supported seeding path; no API-level fallback | Active |
+| 2026-04-18 | No API-level Joplin seeding | Postgres seeding is the only supported seeding path; no API-level fallback | Superseded |
+| 2026-05-10 | Postgres service stage reuses generated fixture output and mounts `seed.sql` into the official Postgres init directory | Keeps the service stage self-contained, avoids a separate script for a simple container composition task, and preserves the Postgres-only seeding rule | Superseded |
+| 2026-05-10 | Fixture seeding will run through Joplin Data API after Joplin startup/migrations | Keeps schema ownership with Joplin, avoids brittle direct SQL schema coupling, and reduces maintenance when Joplin schema evolves | Active |
 | 2026-04-19 | Repository licensed under MPL-2.0 via root LICENSE file | Keeps licensing terms canonical in one file while package and docs point to the same source | Active |
 | 2026-04-19 | Conventional Commits adopted as commit message standard | Consistent history format enables changelog generation and clear intent signalling for agents and humans alike | Active |
 | 2026-04-19 | Add `unit-tests` as an independently runnable test stage | Fast wrapper validation should exist separately from live-service testing and be implementable first | Active |
@@ -636,6 +626,7 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-05-09 | `build-mcp-image` validates runnable entrypoint startup, while health endpoint response validation is enforced in service/integration stages | Preserves stage scope boundaries: build stage verifies image assembly and launchability; live endpoint behavior requires composed services | Superseded |
 | 2026-05-10 | Build-stage startup smoke execution is removed from `build-mcp-image`; runnable behavior is validated in downstream integration/service stages | Avoids duplicating runtime checks before integration gates and keeps build stage focused on reproducible image assembly | Active |
 | 2026-05-10 | Remove `build-fixture-tooling-image` stage from the release plan | Keeps pipeline simpler while retaining fixture safety via `fixture-data` lock validation and `integration-tests` checksum assertions against committed lock baseline | Active |
+| 2026-05-10 | Remove `build-integration-runner-image` stage from the release plan | Keeps pipeline simpler by collapsing runner image setup into `integration-tests`, while preserving integration and fixture-lock validation gates | Active |
 
 ---
 
