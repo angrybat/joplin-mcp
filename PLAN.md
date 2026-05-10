@@ -100,7 +100,7 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 - Fixture lock divergence **always fails** unless `--update-lock` mode is explicitly set.
 - Fixture lock checksum scope includes only generated artifacts in `fixtures/seed/**` and `fixtures/expected/**`.
 - `fixtures/definitions/**` files are canonical inputs but are excluded from fixture lock hashing.
-- Fixture seeding happens in `joplin-service` through the Joplin Data API after Joplin startup/migrations; `postgres-service` only provides the database service.
+- Fixture seeding happens in `joplin-service` after Joplin startup/migrations using the Joplin Server item API (`/api/sessions`, `/api/batch_items`, `/api/items/...`); `postgres-service` only provides the database service.
 - Delete operations on Joplin data are **disabled by default** in all policy configurations.
 
 ---
@@ -262,24 +262,24 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 **Started:** 2026-05-10
 **Completed:** —
 
-**Purpose:** Start a Joplin Server service container connected to Postgres, allow Joplin to create/migrate schema, then seed fixture data through the Joplin Data API.
+**Purpose:** Start a Joplin Server service container connected to Postgres, allow Joplin to create/migrate schema, then seed fixture data through the Joplin Server item API from a separate Python container.
 
 **Inputs:**
 - `--source` pipeline argument (repository root; used to load fixture definitions)
 - `--joplin-version` pipeline argument
 - Running Postgres service from `postgres-service` stage
-- Fixture definitions and/or generated seeding artifacts from `fixture-data`
+- Fixture definitions from `fixtures/definitions/`
 
 **Outputs:**
-- Running Joplin service endpoint and API token for downstream stages
-- Seeded notebooks and notes available via Joplin API
+- Running Joplin service endpoint for downstream stages
+- Seeded notebooks, notes, tags, and note-tag relationships available through Joplin Server item API
 
-**Depends on:** `postgres-service`, `fixture-data`
+**Depends on:** `postgres-service`
 
 **Success Criteria:**
 - Joplin starts on selected version and completes schema creation or upgrade.
-- Joplin Data API responds to baseline read requests.
-- Fixture-defined notebooks/notes are created through API seeding and are accessible through Joplin API.
+- A separate seeding container authenticates to Joplin Server and uploads fixture-defined folders, notes, tags, and note-tag relationships.
+- Seeded items are readable back through Joplin Server item API.
 
 **Failure Criteria:**
 - Joplin fails to start or schema upgrade fails.
@@ -288,7 +288,9 @@ exposes Streamable HTTP MCP transport, and provides standard Kubernetes health p
 
 **Implementation Notes:**
 - Phase 1 contract implemented in `dagger/src/joplin_mcp/__init__.py`: `joplin_service(source, joplin_version, postgres_version)` now accepts repository source input required for fixture-driven API seeding.
-- Phase 2 runtime assembly implemented in `dagger/src/joplin_mcp/__init__.py`: stage now provisions a Joplin service container bound to `postgres-service`, sets Joplin/Postgres runtime env vars, and blocks on a readiness probe (`/api/ping`) before returning the running service.
+- Phase 2 runtime assembly implemented in `dagger/src/joplin_mcp/__init__.py`: stage provisions a Joplin service container bound to `postgres-service` and sets Joplin/Postgres runtime env vars.
+- Phase 3 seeding implemented with `src/scripts/seed_joplin_api.py`: a separate Python container authenticates with the default admin session, implicitly waits for readiness by retrying login, and uploads serialized folder/note/tag items through Joplin Server item endpoints.
+- Seed validation now runs in `joplin-service` (not a dedicated stage) via `pytest tests/seed`, with per-item tests for notebooks, notes, tags, and note-tag links.
 
 ---
 
@@ -585,7 +587,7 @@ _Append-only. Each entry records what changed, when, and why._
 - `unit-tests`: ✅ complete (Phase 1 env validation baseline plus Phase 3 coverage for command construction, supervisor state transitions, health responses, and readiness caching; suite refined into focused state tests; validation: `dagger call unit-tests --source .` passes with 47 tests).
 - `build-mcp-image`: ✅ complete (build function assembles and returns a single container after `uv pip install .`, with `joplin-mcp-wrapper` entrypoint and ports 8000/8001 exposed; build-stage startup smoke execution removed; validation: `dagger call build-mcp-image --source .` succeeded with exit code 0).
 - `postgres-service`: ✅ complete (stage now starts vanilla Postgres only with no fixture SQL mount; validation: `dagger call postgres-service --postgres-version=16` succeeds and returns a service object).
-- `joplin-service`: ⬜ not started (updated contract now includes API-based fixture seeding after Joplin startup/migrations complete).
+- `joplin-service`: 🟡 in progress (runtime startup, separate-container API seeding, and in-stage seed pytest checks implemented; remaining work is cache semantics and final downstream integration usage).
 - `build-fixture-tooling-image`: removed from the stage catalog; fixture generation and validation remain covered by `fixture-data` and `integration-tests` fixture-lock assertions.
 - `build-integration-runner-image`: removed from the stage catalog; integration test runner environment build is now expected to occur inside `integration-tests`.
 - Remaining stages: not started (mcp-service, integration-tests, tests, pre-publish-checks, publish-image, publish-chart).
@@ -614,7 +616,8 @@ _Append-only. Each entry records what changed, when, and why._
 | 2026-04-18 | Multi-arch image from the start | publish-image produces linux/amd64 + linux/arm64; build-mcp-image accepts `--platforms` argument | Active |
 | 2026-04-18 | No API-level Joplin seeding | Postgres seeding is the only supported seeding path; no API-level fallback | Superseded |
 | 2026-05-10 | Postgres service stage reuses generated fixture output and mounts `seed.sql` into the official Postgres init directory | Keeps the service stage self-contained, avoids a separate script for a simple container composition task, and preserves the Postgres-only seeding rule | Superseded |
-| 2026-05-10 | Fixture seeding will run through Joplin Data API after Joplin startup/migrations | Keeps schema ownership with Joplin, avoids brittle direct SQL schema coupling, and reduces maintenance when Joplin schema evolves | Active |
+| 2026-05-10 | Fixture seeding will run through Joplin Data API after Joplin startup/migrations | Keeps schema ownership with Joplin, avoids brittle direct SQL schema coupling, and reduces maintenance when Joplin schema evolves | Superseded |
+| 2026-05-10 | Fixture seeding runs through Joplin Server item endpoints from a separate Python container after startup/migrations | The `joplin/server` image does not expose clipper-style `/api/folders` or `/api/notes`; seeding must authenticate via `/api/sessions` and upload serialized items through `/api/batch_items` and `/api/items/...` while still keeping schema ownership with Joplin | Active |
 | 2026-04-19 | Repository licensed under MPL-2.0 via root LICENSE file | Keeps licensing terms canonical in one file while package and docs point to the same source | Active |
 | 2026-04-19 | Conventional Commits adopted as commit message standard | Consistent history format enables changelog generation and clear intent signalling for agents and humans alike | Active |
 | 2026-04-19 | Add `unit-tests` as an independently runnable test stage | Fast wrapper validation should exist separately from live-service testing and be implementable first | Active |
