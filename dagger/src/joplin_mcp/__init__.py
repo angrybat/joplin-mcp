@@ -144,8 +144,23 @@ class JoplinMcp:
         )
 
     @function
-    async def postgres_service(self, postgres_version: str) -> dagger.Service:
-        raise NotImplementedError("postgres_service not yet implemented — see PLAN.md Phase 3")
+    async def postgres_service(
+        self,
+        source: dagger.Directory,
+        postgres_version: str = "16",
+    ) -> dagger.Service:
+        fixture_output = await self.fixture_data(source)
+        seed_dir = fixture_output.directory("seed")
+
+        return (
+            dag.container()
+            .from_(f"postgres:{postgres_version}")
+            .with_env_variable("POSTGRES_HOST_AUTH_METHOD", "trust")
+            .with_env_variable("POSTGRES_DB", "postgres")
+            .with_mounted_directory("/docker-entrypoint-initdb.d", seed_dir)
+            .with_exposed_port(5432)
+            .as_service()
+        )
 
     @function
     async def joplin_service(self, joplin_version: str, postgres_version: str) -> dagger.Service:
