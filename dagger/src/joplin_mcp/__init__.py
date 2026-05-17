@@ -1,5 +1,7 @@
 """Dagger module package for joplin-mcp."""
 
+import asyncio
+
 import dagger
 from dagger import dag, function, object_type
 
@@ -79,9 +81,10 @@ class JoplinMcp:
             .with_directory("src", source.directory("src"))
         )
 
-        build_container = await self._python_uv_container(repo)
+        container = await self._python_uv_container(repo)
+
         return ( 
-            build_container.with_exec([
+            container.with_exec([
                     "uv",
                     "pip",
                     "install",
@@ -179,7 +182,11 @@ class JoplinMcp:
             .with_directory("src", source.directory("src"))
             .with_directory("tests", source.directory("tests"))
         )
-        postgres = await self.postgres_service(postgres_version=postgres_version)
+
+        postgres, test_container = await asyncio.gather(
+            self.postgres_service(postgres_version=postgres_version),
+            self._python_test_container(repo),
+        )
 
         joplin_service = (
             dag.container()
@@ -219,7 +226,7 @@ class JoplinMcp:
         )
 
         await (
-            (await self._python_test_container(repo))
+            test_container
             .with_env_variable("PYTHONUNBUFFERED", "1")
             .with_service_binding("joplin", joplin_service)
             .with_env_variable("JOPLIN_BASE_URL", "http://joplin:22300")
